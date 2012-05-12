@@ -27,6 +27,9 @@ LT_INIT
 # Find a C compiler
 AC_PROG_CC
 
+# Pedantic errors please
+CFLAGS="$CFLAGS -Wall -Werror -ansi -pedantic"
+
 # Find the standard math functions
 # Taken from http://www.flameeyes.eu/autotools-mythbuster/autoconf/finding.html
 AC_SEARCH_LIBS([log10], [m], [], [

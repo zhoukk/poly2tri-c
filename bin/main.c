@@ -115,7 +115,7 @@ read_points_file (const gchar       *path,
 
           if (points != NULL)
             {
-              g_ptr_array_add (*points, p2t_point_new (ptc[0], ptc[1]));
+              g_ptr_array_add (*points, p2t_point_new_dd (ptc[0], ptc[1]));
               countPts++;
             }
         }
@@ -153,16 +153,6 @@ read_points_file (const gchar       *path,
     g_print ("Read %d points and %d colors\n", countPts, countCls);
 }
 
-/* In order to find the maximal length of a filename path, most
- * platforms have either the macro MAX_PATH, or PATH_MAX. This is a
- * guess which tries them both */
- 
-#ifdef MAX_PATH
-#define P2TC_MAX_PATH MAX_PATH
-#else
-#define P2TC_MAX_PATH PATH_MAX
-#endif
-
 /* Calculate a "deterministic random" color for each point
  * based on its memory address. Since we know that least-significant bytes
  * of the point address will change more than the mor-important ones, we
@@ -191,13 +181,12 @@ gint main (int argc, char *argv[])
   P2trCDT *rcdt;
   P2trDelaunayTerminator *dt;
 
-  gchar buf[P2TC_MAX_PATH+1];
+  gchar *buf;
   gfloat *im;
+  P2trImageConfig imc;
 
   context = g_option_context_new ("- Create a fine mesh from a given PSLG");
   g_option_context_add_main_entries (context, entries, NULL);
-
-//  g_option_context_add_group (context, gtk_get_option_group (TRUE));
 
   if (!g_option_context_parse (context, &argc, &argv, &error))
     {
@@ -242,6 +231,7 @@ gint main (int argc, char *argv[])
 
   fclose (out);
 
+  buf = g_newa(char, strlen(output_file) + 5);
   sprintf (buf, "%s.ppm", output_file);
 
   if ((out = fopen (buf, "w")) == NULL)
@@ -250,8 +240,9 @@ gint main (int argc, char *argv[])
       exit (1);
     }
 
-  P2trImageConfig imc;
-  
+  g_free (buf);
+  buf = NULL;
+
   imc.cpp = 4;
   imc.min_x = imc.min_y = 0;
   imc.step_x = imc.step_y = 0.2;
@@ -266,12 +257,14 @@ gint main (int argc, char *argv[])
 
   g_free (im);
 
-  // p2tr_triangulation_free (T);
+#if FALSE
+  p2tr_triangulation_free (T);
 
-//  for (i = 0; i < pts->len; i++)
-//    {
-//      p2tr_point_unref ((P2trPoint*) g_ptr_array_index (pts, i));
-//    }
+  for (i = 0; i < pts->len; i++)
+    {
+      p2tr_point_unref ((P2trPoint*) g_ptr_array_index (pts, i));
+    }
+#endif
 
   g_ptr_array_free (pts, TRUE);
   g_array_free (colors, TRUE);

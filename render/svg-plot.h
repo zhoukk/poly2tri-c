@@ -39,7 +39,7 @@
 #include <refine/refine.h>
 
 #define PLOT_LINE_WIDTH 0.40
-#define ARROW_SIDE_ANGLE (M_PI / 180 * 30)
+#define ARROW_SIDE_ANGLE (G_PI / 180 * 30)
 #define ARROW_HEAD_SIZE 2.0
 
 #define X_SCALE 3.

@@ -128,7 +128,6 @@ p2tr_mesh_render_scanline2 (P2truvt              *uvt_cache,
 
   P2trPoint *A = NULL, *B = NULL, *C = NULL;
 
-  gfloat *col =  g_new (gfloat, config->cpp);
   gfloat *colA = g_new (gfloat, config->cpp);
   gfloat *colB = g_new (gfloat, config->cpp);
   gfloat *colC = g_new (gfloat, config->cpp);
@@ -186,11 +185,13 @@ p2tr_write_ppm (FILE            *f,
                 P2trImageConfig *config)
 {
   gint x, y;
+  gfloat *pixel;
+
   fprintf (f, "P3\n");
   fprintf (f, "%d %d\n", config->x_samples, config->y_samples);
   fprintf (f, "255\n");
 
-  gfloat *pixel = dest;
+  pixel = dest;
 
   for (y = 0; y < config->y_samples; y++)
     {

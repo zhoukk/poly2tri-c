@@ -33,13 +33,13 @@ p2tr_plot_svg_plot_line (gdouble x1, gdouble y1, gdouble x2, gdouble y2, const g
 void
 p2tr_plot_svg_plot_arrow (gdouble x1, gdouble y1, gdouble x2, gdouble y2, const gchar* color, FILE *outfile)
 {
-  p2tr_plot_svg_plot_line (x1, y1, x2, y2, color, outfile);
-
   gdouble dy = y2 - y1;
   gdouble dx = x2 - x1;
   gdouble angle = atan2 (dy, dx);
-
   gdouble temp = angle - ARROW_SIDE_ANGLE;
+
+  p2tr_plot_svg_plot_line (x1, y1, x2, y2, color, outfile);
+
   p2tr_plot_svg_plot_line (x2, y2, x2 - ARROW_HEAD_SIZE * cos (temp), y2 - ARROW_HEAD_SIZE * sin (temp), color, outfile);
 
   temp = angle + ARROW_SIDE_ANGLE;
@@ -111,8 +111,10 @@ p2tr_plot_svg_plot_edge (P2trEdge *self, const gchar* color, FILE* outfile)
 
   p2tr_plot_svg_plot_line (x1, y1, x2, y2, color, outfile);
 
-//  if (p2tr_edge_is_encroached (self))
-//    p2tr_plot_svg_plot_circle ((x1 + x2) / 2, (y1 + y2) / 2, R, "red", outfile);
+#if FALSE
+  if (p2tr_edge_is_encroached (self))
+    p2tr_plot_svg_plot_circle ((x1 + x2) / 2, (y1 + y2) / 2, R, "red", outfile);
+#endif
 }
 
 void
