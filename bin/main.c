@@ -221,6 +221,8 @@ gint main (int argc, char *argv[])
   read_points_file (input_file, &pts, &colors);
 
   cdt = p2t_cdt_new (pts);
+  p2t_cdt_triangulate (cdt);
+
   rcdt = p2tr_cdt_new (cdt);
   p2t_cdt_free (cdt);
   

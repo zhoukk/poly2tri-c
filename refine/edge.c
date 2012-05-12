@@ -63,31 +63,33 @@ p2tr_edge_is_removed (P2trEdge *self)
   return self->end == NULL;
 }
 
-static void
-p2tr_edge_remove_one_side (P2trEdge *self)
-{
-  if (self->tri != NULL)
-  {
-    p2tr_triangle_remove (self->tri);
-    p2tr_triangle_unref (self->tri);
-    self->tri = NULL;
-  }
-  _p2tr_point_remove_edge(P2TR_EDGE_START(self), self);
-  p2tr_point_unref (self->end);
-  self->end = NULL;
-}
-
 void
 p2tr_edge_remove (P2trEdge *self)
 {
   P2trMesh *mesh;
+  P2trPoint *start, *end;
 
   if (self->end == NULL) /* This is only true if the edge was removed */
     return;
 
   mesh = p2tr_edge_get_mesh (self);
-  p2tr_edge_remove_one_side (self);
-  p2tr_edge_remove_one_side (self->mirror);
+
+  start = P2TR_EDGE_START(self);
+  end = self->end;
+
+  if (self->tri != NULL)
+    p2tr_triangle_remove (self->tri);
+  if (self->mirror->tri != NULL)
+    p2tr_triangle_remove (self->mirror->tri);
+
+  _p2tr_point_remove_edge(start, self);
+  _p2tr_point_remove_edge(end, self->mirror);
+
+  self->end = NULL;
+  self->mirror->end = NULL;
+
+  p2tr_point_unref (start);
+  p2tr_point_unref (end);
   
   if (mesh != NULL)
   {
