@@ -3,7 +3,7 @@
 #include <glib.h>
 
 #include "utils.h"
-#include "math.h"
+#include "rmath.h"
 
 #include "point.h"
 #include "edge.h"
@@ -407,7 +407,11 @@ static void
 ChooseSplitVertex(P2trEdge *e, P2trVector2 *dst)
 {
   gdouble sourceLength = p2tr_edge_get_length(e);
-  gdouble newLength = pow(2, round(LOG2(sourceLength)));
+  gdouble newLengthFloor = pow(2, floor(LOG2(sourceLength)));
+  gdouble newLengthCeil = newLengthFloor * 2;
+  gdouble newLength =
+      (sourceLength - newLengthFloor < newLengthCeil - sourceLength)
+      ? newLengthFloor : newLengthCeil;
   gdouble ratio, resultLength;
   
   /* IMPORTANT! DIVIDE BY 2! */

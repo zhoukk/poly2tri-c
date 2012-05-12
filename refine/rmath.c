@@ -1,6 +1,6 @@
 #include <math.h>
 #include <glib.h>
-#include "math.h"
+#include "rmath.h"
 
 gdouble
 p2tr_math_length_sq (gdouble x1, gdouble y1,

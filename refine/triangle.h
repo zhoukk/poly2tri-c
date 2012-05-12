@@ -2,7 +2,7 @@
 #define __P2TC_REFINE_TRIANGLE_H__
 
 #include <glib.h>
-#include "math.h"
+#include "rmath.h"
 #include "triangulation.h"
 
 /**

@@ -2,7 +2,7 @@
 #define __P2TC_REFINE_H__
 
 #include "utils.h"
-#include "math.h"
+#include "rmath.h"
 
 #include "vector2.h"
 #include "circle.h"

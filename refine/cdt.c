@@ -474,7 +474,7 @@ p2tr_cdt_flip_fix (P2trCDT *self,
           opposite = p2tr_triangle_get_opposite_point (e->mirror->tri, e->mirror);
           if (! p2tr_circle_test_point_outside(&circum_circle, &opposite->c))
             {
-              P2trEdge *flipped;
+              P2trEdge *flipped = NULL;
               if (p2tr_cdt_try_flip (self, e, &tris_to_fix, &flipped))
                 {
                   g_queue_push_tail (&flipped_edges, flipped);

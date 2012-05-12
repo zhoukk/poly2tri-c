@@ -2,7 +2,7 @@
 #include <glib.h>
 
 #include "utils.h"
-#include "math.h"
+#include "rmath.h"
 
 #include "point.h"
 #include "edge.h"
