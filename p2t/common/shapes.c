@@ -36,7 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/// Default constructor does nothing (for performance).
+/** Default constructor does nothing (for performance). */
 
 void
 p2t_point_init (P2tPoint* THIS)
@@ -54,7 +54,7 @@ p2t_point_new ()
   return THIS;
 }
 
-/// Construct using coordinates.
+/** Construct using coordinates. */
 
 void
 p2t_point_init_dd (P2tPoint* THIS, double x, double y)
@@ -85,7 +85,7 @@ p2t_point_free (P2tPoint* THIS)
   g_slice_free (P2tPoint, THIS);
 }
 
-/// Constructor
+/** Constructor */
 
 void
 p2t_edge_init (P2tEdge* THIS, P2tPoint* p1, P2tPoint* p2)
@@ -106,7 +106,7 @@ p2t_edge_init (P2tEdge* THIS, P2tPoint* p1, P2tPoint* p2)
         }
       else if (p1->x == p2->x)
         {
-          // Repeat points
+          /* Repeat points */
           assert (FALSE);
         }
     }
@@ -154,7 +154,7 @@ p2t_triangle_init (P2tTriangle* THIS, P2tPoint* a, P2tPoint* b, P2tPoint* c)
   THIS->interior_ = FALSE;
 
 }
-// Update neighbor pointers
+/* Update neighbor pointers */
 
 void
 p2t_triangle_mark_neighbor_pt_pt_tr (P2tTriangle* THIS, P2tPoint* p1, P2tPoint* p2, P2tTriangle* t)
@@ -169,7 +169,7 @@ p2t_triangle_mark_neighbor_pt_pt_tr (P2tTriangle* THIS, P2tPoint* p1, P2tPoint* 
     assert (0);
 }
 
-// Exhaustive search to update neighbor pointers
+/* Exhaustive search to update neighbor pointers */
 
 void
 p2t_triangle_mark_neighbor_tr (P2tTriangle* THIS, P2tTriangle *t)
@@ -246,15 +246,15 @@ P2tPoint*
 p2t_triangle_opposite_point (P2tTriangle* THIS, P2tTriangle* t, P2tPoint* p)
 {
   P2tPoint *cw = p2t_triangle_point_cw (t, p);
-  double x = cw->x;
+  /*double x = cw->x;
   double y = cw->y;
   x = p->x;
   y = p->y;
-  P2tPoint* ham = p2t_triangle_point_cw (THIS, cw);
+  P2tPoint* ham = */p2t_triangle_point_cw (THIS, cw);
   return p2t_triangle_point_cw (THIS, cw);
 }
 
-// Legalized triangle by rotating clockwise around point(0)
+/* Legalized triangle by rotating clockwise around point(0) */
 
 void
 p2t_triangle_legalize_pt (P2tTriangle* THIS, P2tPoint *point)
@@ -264,7 +264,7 @@ p2t_triangle_legalize_pt (P2tTriangle* THIS, P2tPoint *point)
   THIS->points_[2] = point;
 }
 
-// Legalize triagnle by rotating clockwise around oPoint
+/* Legalize triagnle by rotating clockwise around oPoint */
 
 void
 p2t_triangle_legalize_pt_pt (P2tTriangle* THIS, P2tPoint *opoint, P2tPoint *npoint)
@@ -362,7 +362,7 @@ p2t_triangle_mark_constrained_edge_ed (P2tTriangle* THIS, P2tEdge* edge)
   p2t_triangle_mark_constrained_edge_pt_pt (THIS, edge->p, edge->q);
 }
 
-// Mark edge as constrained
+/* Mark edge as constrained */
 
 void
 p2t_triangle_mark_constrained_edge_pt_pt (P2tTriangle* THIS, P2tPoint* p, P2tPoint* q)
@@ -381,7 +381,7 @@ p2t_triangle_mark_constrained_edge_pt_pt (P2tTriangle* THIS, P2tPoint* p, P2tPoi
     }
 }
 
-// The point counter-clockwise to given point
+/* The point counter-clockwise to given point */
 
 P2tPoint*
 p2t_triangle_point_cw (P2tTriangle* THIS, P2tPoint* point)
@@ -401,7 +401,7 @@ p2t_triangle_point_cw (P2tTriangle* THIS, P2tPoint* point)
   assert (0);
 }
 
-// The point counter-clockwise to given point
+/* The point counter-clockwise to given point */
 
 P2tPoint*
 p2t_triangle_point_ccw (P2tTriangle* THIS, P2tPoint* point)
@@ -421,7 +421,7 @@ p2t_triangle_point_ccw (P2tTriangle* THIS, P2tPoint* point)
   assert (0);
 }
 
-// The neighbor clockwise to given point
+/* The neighbor clockwise to given point */
 
 P2tTriangle*
 p2t_triangle_neighbor_cw (P2tTriangle* THIS, P2tPoint* point)
@@ -437,7 +437,7 @@ p2t_triangle_neighbor_cw (P2tTriangle* THIS, P2tPoint* point)
   return THIS->neighbors_[0];
 }
 
-// The neighbor counter-clockwise to given point
+/* The neighbor counter-clockwise to given point */
 
 P2tTriangle*
 p2t_triangle_neighbor_ccw (P2tTriangle* THIS, P2tPoint* point)
@@ -577,7 +577,7 @@ p2t_triangle_set_delunay_edge_cw (P2tTriangle* THIS, P2tPoint* p, gboolean e)
     }
 }
 
-// The neighbor across to given point
+/* The neighbor across to given point */
 
 P2tTriangle*
 p2t_triangle_neighbor_across (P2tTriangle* THIS, P2tPoint* opoint)
@@ -601,8 +601,8 @@ p2t_triangle_debug_print (P2tTriangle* THIS)
   printf ("%f,%f\n", THIS->points_[2]->x, THIS->points_[2]->y);
 }
 
-// WARNING! the function for sorting a g_ptr_array expects to recieve
-//          pointers to the pointers (double indirection)!
+/* WARNING! the function for sorting a g_ptr_array expects to recieve
+ *          pointers to the pointers (double indirection)! */
 
 gint
 p2t_point_cmp (gconstpointer a, gconstpointer b)
@@ -614,7 +614,7 @@ p2t_point_cmp (gconstpointer a, gconstpointer b)
     }
   else if (ap->y == bp->y)
     {
-      // Make sure q is point with greater x value
+      /* Make sure q is point with greater x value */
       if (ap->x < bp->x)
         {
           return -1;
@@ -625,73 +625,13 @@ p2t_point_cmp (gconstpointer a, gconstpointer b)
   return 1;
 }
 
-//  /// Add two points_ component-wise.
-//
-//  Point operator + (const Point& a, const Point& b)
-//  {
-//    return Point (a.x + b.x, a.y + b.y);
-//  }
-//
-//  /// Subtract two points_ component-wise.
-//
-//  Point operator - (const Point& a, const Point& b)
-//  {
-//    return Point (a.x - b.x, a.y - b.y);
-//  }
-//
-//  /// Multiply point by scalar
-//
-//  Point operator * (double s, const Point& a)
-//  {
-//    return Point (s * a.x, s * a.y);
-//  }
-
-//  gboolean operator == (const Point& a, const Point& b)
+/* gboolean operator == (const Point& a, const Point& b) */
 
 gboolean
 p2t_point_equals (const P2tPoint* a, const P2tPoint* b)
 {
   return a->x == b->x && a->y == b->y;
 }
-//
-//  gboolean operator != (const Point& a, const Point& b)
-//  {
-//    return a.x != b.x && a.y != b.y;
-//  }
-
-//  /// Peform the dot product on two vectors.
-//
-//  double
-//  Dot (const Point& a, const Point& b)
-//  {
-//    return a.x * b.x + a.y * b.y;
-//  }
-//
-//  /// Perform the cross product on two vectors. In 2D this produces a scalar.
-//
-//  double
-//  Cross (const Point& a, const Point& b)
-//  {
-//    return a.x * b.y - a.y * b.x;
-//  }
-//
-//  /// Perform the cross product on a point and a scalar. In 2D this produces
-//  /// a point.
-//
-//  Point
-//  Cross (const Point& a, double s)
-//  {
-//    return Point (s * a.y, -s * a.x);
-//  }
-//
-//  /// Perform the cross product on a scalar and a point. In 2D this produces
-//  /// a point.
-//
-//  Point
-//  Cross (const double s, const Point& a)
-//  {
-//    return Point (-s * a.y, s * a.x);
-//  }
 
 P2tPoint*
 p2t_triangle_get_point (P2tTriangle* THIS, const int index)

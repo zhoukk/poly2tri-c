@@ -29,6 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <math.h>
+
 #include "sweep.h"
 #include "sweep_context.h"
 #include "advancing_front.h"
@@ -56,7 +58,7 @@ void
 p2t_sweep_destroy (P2tSweep* THIS)
 {
   int i;
-  // Clean up memory
+  /* Clean up memory */
   for (i = 0; i < THIS->nodes_->len; i++)
     {
       p2t_node_free (node_index (THIS->nodes_, i));
@@ -72,16 +74,16 @@ p2t_sweep_free (P2tSweep* THIS)
   g_free (THIS);
 }
 
-// Triangulate simple polygon with holes
+/* Triangulate simple polygon with holes */
 
 void
 p2t_sweep_triangulate (P2tSweep *THIS, P2tSweepContext *tcx)
 {
   p2t_sweepcontext_init_triangulation (tcx);
   p2t_sweepcontext_create_advancingfront (tcx, THIS->nodes_);
-  // Sweep points; build mesh
+  /* Sweep points; build mesh */
   p2t_sweep_sweep_points (THIS, tcx);
-  // Clean up
+  /* Clean up */
   p2t_sweep_finalization_polygon (THIS, tcx);
 }
 
@@ -103,7 +105,7 @@ p2t_sweep_sweep_points (P2tSweep *THIS, P2tSweepContext *tcx)
 void
 p2t_sweep_finalization_polygon (P2tSweep *THIS, P2tSweepContext *tcx)
 {
-  // Get an Internal triangle to start with
+  /* Get an Internal triangle to start with */
   P2tTriangle* t = p2t_advancingfront_head (p2t_sweepcontext_front (tcx))->next->triangle;
   P2tPoint* p = p2t_advancingfront_head (p2t_sweepcontext_front (tcx))->next->point;
   while (!p2t_triangle_get_constrained_edge_cw (t, p))
@@ -111,7 +113,7 @@ p2t_sweep_finalization_polygon (P2tSweep *THIS, P2tSweepContext *tcx)
       t = p2t_triangle_neighbor_ccw (t, p);
     }
 
-  // Collect interior triangles constrained by edges
+  /* Collect interior triangles constrained by edges */
   p2t_sweepcontext_mesh_clean (tcx, t);
 }
 
@@ -121,14 +123,14 @@ p2t_sweep_point_event (P2tSweep *THIS, P2tSweepContext *tcx, P2tPoint* point)
   P2tNode* node = p2t_sweepcontext_locate_node (tcx, point);
   P2tNode* new_node = p2t_sweep_new_front_triangle (THIS, tcx, point, node);
 
-  // Only need to check +epsilon since point never have smaller
-  // x value than node due to how we fetch nodes from the front
+  /* Only need to check +epsilon since point never have smaller
+   * x value than node due to how we fetch nodes from the front */
   if (point->x <= node->point->x + EPSILON)
     {
       p2t_sweep_fill (THIS, tcx, node);
     }
 
-  //tcx.AddNode(new_node);
+  /*tcx.AddNode(new_node); */
 
   p2t_sweep_fill_advancingfront (THIS, tcx, new_node);
   return new_node;
@@ -145,9 +147,10 @@ p2t_sweep_edge_event_ed_n (P2tSweep *THIS, P2tSweepContext *tcx, P2tEdge* edge, 
       return;
     }
 
-  // For now we will do all needed filling
-  // TODO: integrate with flip process might give some better performance
-  //       but for now this avoid the issue with cases that needs both flips and fills
+  /* For now we will do all needed filling
+   * TODO: integrate with flip process might give some better performance
+   *       but for now this avoid the issue with cases that needs both flips and fills
+   */
   p2t_sweep_fill_edge_event (THIS, tcx, edge, node);
   p2t_sweep_edge_event_pt_pt_tr_pt (THIS, tcx, edge->p, edge->q, node->triangle, edge->q);
 }
@@ -155,20 +158,24 @@ p2t_sweep_edge_event_ed_n (P2tSweep *THIS, P2tSweepContext *tcx, P2tEdge* edge, 
 void
 p2t_sweep_edge_event_pt_pt_tr_pt (P2tSweep *THIS, P2tSweepContext *tcx, P2tPoint* ep, P2tPoint* eq, P2tTriangle* triangle, P2tPoint* point)
 {
+  P2tPoint *p1, *p2;
+  P2tOrientation o1, o2;
+
   if (p2t_sweep_is_edge_side_of_triangle (THIS, triangle, ep, eq))
     {
       return;
     }
 
-  P2tPoint* p1 = p2t_triangle_point_ccw (triangle, point);
-  P2tOrientation o1 = p2t_orient2d (eq, p1, ep);
+  p1 = p2t_triangle_point_ccw (triangle, point);
+  o1 = p2t_orient2d (eq, p1, ep);
   if (o1 == COLLINEAR)
     {
       if (p2t_triangle_contains_pt_pt (triangle, eq, p1))
         {
           p2t_triangle_mark_constrained_edge_pt_pt (triangle, eq, p1);
-          // We are modifying the constraint maybe it would be better to
-          // not change the given constraint and just keep a variable for the new constraint
+          /* We are modifying the constraint maybe it would be better to
+           * not change the given constraint and just keep a variable for the new constraint
+           */
           tcx->edge_event.constrained_edge->q = p1;
           triangle = p2t_triangle_neighbor_across (triangle, point);
           p2t_sweep_edge_event_pt_pt_tr_pt (THIS, tcx, ep, p1, triangle, p1);
@@ -180,15 +187,16 @@ p2t_sweep_edge_event_pt_pt_tr_pt (P2tSweep *THIS, P2tSweepContext *tcx, P2tPoint
       return;
     }
 
-  P2tPoint* p2 = p2t_triangle_point_cw (triangle, point);
-  P2tOrientation o2 = p2t_orient2d (eq, p2, ep);
+  p2 = p2t_triangle_point_cw (triangle, point);
+  o2 = p2t_orient2d (eq, p2, ep);
   if (o2 == COLLINEAR)
     {
       if (p2t_triangle_contains_pt_pt (triangle, eq, p2))
         {
           p2t_triangle_mark_constrained_edge_pt_pt (triangle, eq, p2);
-          // We are modifying the constraint maybe it would be better to
-          // not change the given constraint and just keep a variable for the new constraint
+          /* We are modifying the constraint maybe it would be better to
+           * not change the given constraint and just keep a variable for the new constraint
+           */
           tcx->edge_event.constrained_edge->q = p2;
           triangle = p2t_triangle_neighbor_across (triangle, point);
           p2t_sweep_edge_event_pt_pt_tr_pt (THIS, tcx, ep, p2, triangle, p2);
@@ -202,8 +210,8 @@ p2t_sweep_edge_event_pt_pt_tr_pt (P2tSweep *THIS, P2tSweepContext *tcx, P2tPoint
 
   if (o1 == o2)
     {
-      // Need to decide if we are rotating CW or CCW to get to a triangle
-      // that will cross edge
+      /* Need to decide if we are rotating CW or CCW to get to a triangle
+       * that will cross edge */
       if (o1 == CW)
         {
           triangle = p2t_triangle_neighbor_ccw (triangle, point);
@@ -216,7 +224,7 @@ p2t_sweep_edge_event_pt_pt_tr_pt (P2tSweep *THIS, P2tSweepContext *tcx, P2tPoint
     }
   else
     {
-      // This triangle crosses constraint so lets flippin start!
+      /* This triangle crosses constraint so lets flippin start! */
       p2t_sweep_flip_edge_event (THIS, tcx, ep, eq, triangle, point);
     }
 }
@@ -228,8 +236,9 @@ p2t_sweep_is_edge_side_of_triangle (P2tSweep *THIS, P2tTriangle *triangle, P2tPo
 
   if (index != -1)
     {
+      P2tTriangle *t;
       p2t_triangle_mark_constrained_edge_i (triangle, index);
-      P2tTriangle* t = p2t_triangle_get_neighbor (triangle, index);
+      t = p2t_triangle_get_neighbor (triangle, index);
       if (t)
         {
           p2t_triangle_mark_constrained_edge_pt_pt (t, ep, eq);
@@ -243,11 +252,12 @@ P2tNode*
 p2t_sweep_new_front_triangle (P2tSweep *THIS, P2tSweepContext *tcx, P2tPoint* point, P2tNode *node)
 {
   P2tTriangle* triangle = p2t_triangle_new (point, node->point, node->next->point);
+  P2tNode *new_node;
 
   p2t_triangle_mark_neighbor_tr (triangle, node->triangle);
   p2t_sweepcontext_add_to_map (tcx, triangle);
 
-  P2tNode* new_node = p2t_node_new_pt (point);
+  new_node = p2t_node_new_pt (point);
   g_ptr_array_add (THIS->nodes_, new_node);
 
   new_node->next = node->next;
@@ -268,18 +278,18 @@ p2t_sweep_fill (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* node)
 {
   P2tTriangle* triangle = p2t_triangle_new (node->prev->point, node->point, node->next->point);
 
-  // TODO: should copy the constrained_edge value from neighbor triangles
-  //       for now constrained_edge values are copied during the legalize
+  /* TODO: should copy the constrained_edge value from neighbor triangles
+   *       for now constrained_edge values are copied during the legalize */
   p2t_triangle_mark_neighbor_tr (triangle, node->prev->triangle);
   p2t_triangle_mark_neighbor_tr (triangle, node->triangle);
 
   p2t_sweepcontext_add_to_map (tcx, triangle);
 
-  // Update the advancing front
+  /* Update the advancing front */
   node->prev->next = node->next;
   node->next->prev = node->prev;
 
-  // If it was legalized the triangle has already been mapped
+  /* If it was legalized the triangle has already been mapped */
   if (!p2t_sweep_legalize (THIS, tcx, triangle))
     {
       p2t_sweepcontext_map_triangle_to_nodes (tcx, triangle);
@@ -291,29 +301,29 @@ void
 p2t_sweep_fill_advancingfront (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* n)
 {
 
-  // Fill right holes
+  /* Fill right holes */
   P2tNode* node = n->next;
 
   while (node->next)
     {
       double angle = p2t_sweep_hole_angle (THIS, node);
-      if (angle > M_PI_2 || angle < -M_PI_2) break;
+      if (angle > G_PI_2 || angle < -G_PI_2) break;
       p2t_sweep_fill (THIS, tcx, node);
       node = node->next;
     }
 
-  // Fill left holes
+  /* Fill left holes */
   node = n->prev;
 
   while (node->prev)
     {
       double angle = p2t_sweep_hole_angle (THIS, node);
-      if (angle > M_PI_2 || angle < -M_PI_2) break;
+      if (angle > G_PI_2 || angle < -G_PI_2) break;
       p2t_sweep_fill (THIS, tcx, node);
       node = node->prev;
     }
 
-  // Fill right basins
+  /* Fill right basins */
   if (n->next && n->next->next)
     {
       double angle = p2t_sweep_basin_angle (THIS, n);
@@ -354,45 +364,49 @@ gboolean
 p2t_sweep_legalize (P2tSweep *THIS, P2tSweepContext *tcx, P2tTriangle *t)
 {
   int i;
-  // To legalize a triangle we start by finding if any of the three edges
-  // violate the Delaunay condition
+  /* To legalize a triangle we start by finding if any of the three edges
+   * violate the Delaunay condition */
   for (i = 0; i < 3; i++)
     {
+      P2tTriangle *ot;
+
       if (t->delaunay_edge[i])
         continue;
 
-      P2tTriangle* ot = p2t_triangle_get_neighbor (t, i);
+      ot = p2t_triangle_get_neighbor (t, i);
 
       if (ot)
         {
           P2tPoint* p = p2t_triangle_get_point (t, i);
           P2tPoint* op = p2t_triangle_opposite_point (ot, t, p);
           int oi = p2t_triangle_index (ot, op);
+          gboolean inside;
 
-          // If this is a Constrained Edge or a Delaunay Edge(only during recursive legalization)
-          // then we should not try to legalize
+          /* If this is a Constrained Edge or a Delaunay Edge(only during recursive legalization)
+           * then we should not try to legalize */
           if (ot->constrained_edge[oi] || ot->delaunay_edge[oi])
             {
               t->constrained_edge[i] = ot->constrained_edge[oi];
               continue;
             }
 
-          gboolean inside = p2t_sweep_incircle (THIS, p, p2t_triangle_point_ccw (t, p), p2t_triangle_point_cw (t, p), op);
+          inside = p2t_sweep_incircle (THIS, p, p2t_triangle_point_ccw (t, p), p2t_triangle_point_cw (t, p), op);
 
           if (inside)
             {
-              // Lets mark this shared edge as Delaunay
+              gboolean not_legalized;
+              /* Lets mark this shared edge as Delaunay */
               t->delaunay_edge[i] = TRUE;
               ot->delaunay_edge[oi] = TRUE;
 
-              // Lets rotate shared edge one vertex CW to legalize it
+              /* Lets rotate shared edge one vertex CW to legalize it */
               p2t_sweep_rotate_triangle_pair (THIS, t, p, ot, op);
 
-              // We now got one valid Delaunay Edge shared by two triangles
-              // This gives us 4 new edges to check for Delaunay
+              /* We now got one valid Delaunay Edge shared by two triangles
+               * This gives us 4 new edges to check for Delaunay */
 
-              // Make sure that triangle to node mapping is done only one time for a specific triangle
-              gboolean not_legalized = !p2t_sweep_legalize (THIS, tcx, t);
+              /* Make sure that triangle to node mapping is done only one time for a specific triangle */
+              not_legalized = !p2t_sweep_legalize (THIS, tcx, t);
               if (not_legalized)
                 {
                   p2t_sweepcontext_map_triangle_to_nodes (tcx, t);
@@ -402,15 +416,15 @@ p2t_sweep_legalize (P2tSweep *THIS, P2tSweepContext *tcx, P2tTriangle *t)
               if (not_legalized)
                 p2t_sweepcontext_map_triangle_to_nodes (tcx, ot);
 
-              // Reset the Delaunay edges, since they only are valid Delaunay edges
-              // until we add a new triangle or point.
-              // XXX: need to think about this. Can these edges be tried after we
-              //      return to previous recursive level?
+              /* Reset the Delaunay edges, since they only are valid Delaunay edges
+               * until we add a new triangle or point.
+               * XXX: need to think about this. Can these edges be tried after we
+               *      return to previous recursive level? */
               t->delaunay_edge[i] = FALSE;
               ot->delaunay_edge[oi] = FALSE;
 
-              // If triangle have been legalized no need to check the other edges since
-              // the recursive legalization will handles those so we can end here.
+              /* If triangle have been legalized no need to check the other edges since
+               * the recursive legalization will handles those so we can end here.*/
               return TRUE;
             }
         }
@@ -430,27 +444,34 @@ p2t_sweep_incircle (P2tSweep *THIS, P2tPoint* pa, P2tPoint* pb, P2tPoint* pc, P2
   double bdxady = bdx * ady;
   double oabd = adxbdy - bdxady;
 
+  double cdx, cdy;
+  double cdxady, adxcdy, ocad;
+
+  double bdxcdy, cdxbdy;
+  double alift, blift, clift;
+  double det;
+
   if (oabd <= 0)
     return FALSE;
 
-  double cdx = pc->x - pd->x;
-  double cdy = pc->y - pd->y;
+  cdx = pc->x - pd->x;
+  cdy = pc->y - pd->y;
 
-  double cdxady = cdx * ady;
-  double adxcdy = adx * cdy;
-  double ocad = cdxady - adxcdy;
+  cdxady = cdx * ady;
+  adxcdy = adx * cdy;
+  ocad = cdxady - adxcdy;
 
   if (ocad <= 0)
     return FALSE;
 
-  double bdxcdy = bdx * cdy;
-  double cdxbdy = cdx * bdy;
+  bdxcdy = bdx * cdy;
+  cdxbdy = cdx * bdy;
 
-  double alift = adx * adx + ady * ady;
-  double blift = bdx * bdx + bdy * bdy;
-  double clift = cdx * cdx + cdy * cdy;
+  alift = adx * adx + ady * ady;
+  blift = bdx * bdx + bdy * bdy;
+  clift = cdx * cdx + cdy * cdy;
 
-  double det = alift * (bdxcdy - cdxbdy) + blift * ocad + clift * oabd;
+  det = alift * (bdxcdy - cdxbdy) + blift * ocad + clift * oabd;
 
   return det > 0;
 }
@@ -458,19 +479,20 @@ p2t_sweep_incircle (P2tSweep *THIS, P2tPoint* pa, P2tPoint* pb, P2tPoint* pc, P2
 void
 p2t_sweep_rotate_triangle_pair (P2tSweep *THIS, P2tTriangle *t, P2tPoint* p, P2tTriangle *ot, P2tPoint* op)
 {
-  P2tTriangle* n1, *n2, *n3, *n4;
+  P2tTriangle *n1, *n2, *n3, *n4;
+  gboolean ce1, ce2, ce3, ce4;
+  gboolean de1, de2, de3, de4;
+
   n1 = p2t_triangle_neighbor_ccw (t, p);
   n2 = p2t_triangle_neighbor_cw (t, p);
   n3 = p2t_triangle_neighbor_ccw (ot, op);
   n4 = p2t_triangle_neighbor_cw (ot, op);
 
-  gboolean ce1, ce2, ce3, ce4;
   ce1 = p2t_triangle_get_constrained_edge_ccw (t, p);
   ce2 = p2t_triangle_get_constrained_edge_cw (t, p);
   ce3 = p2t_triangle_get_constrained_edge_ccw (ot, op);
   ce4 = p2t_triangle_get_constrained_edge_cw (ot, op);
 
-  gboolean de1, de2, de3, de4;
   de1 = p2t_triangle_get_delunay_edge_ccw (t, p);
   de2 = p2t_triangle_get_delunay_edge_cw (t, p);
   de3 = p2t_triangle_get_delunay_edge_ccw (ot, op);
@@ -479,23 +501,23 @@ p2t_sweep_rotate_triangle_pair (P2tSweep *THIS, P2tTriangle *t, P2tPoint* p, P2t
   p2t_triangle_legalize_pt_pt (t, p, op);
   p2t_triangle_legalize_pt_pt (ot, op, p);
 
-  // Remap delaunay_edge
+  /* Remap delaunay_edge */
   p2t_triangle_set_delunay_edge_ccw (ot, p, de1);
   p2t_triangle_set_delunay_edge_cw (t, p, de2);
   p2t_triangle_set_delunay_edge_ccw (t, op, de3);
   p2t_triangle_set_delunay_edge_cw (ot, op, de4);
 
-  // Remap constrained_edge
+  /* Remap constrained_edge */
   p2t_triangle_set_constrained_edge_ccw (ot, p, ce1);
   p2t_triangle_set_constrained_edge_cw (t, p, ce2);
   p2t_triangle_set_constrained_edge_ccw (t, op, ce3);
   p2t_triangle_set_constrained_edge_cw (ot, op, ce4);
 
-  // Remap neighbors
-  // XXX: might optimize the markNeighbor by keeping track of
-  //      what side should be assigned to what neighbor after the
-  //      rotation. Now mark neighbor does lots of testing to find
-  //      the right side.
+  /* Remap neighbors
+   * XXX: might optimize the markNeighbor by keeping track of
+   *      what side should be assigned to what neighbor after the
+   *      rotation. Now mark neighbor does lots of testing to find
+   *      the right side. */
   p2t_triangle_clear_neighbors (t);
   p2t_triangle_clear_neighbors (ot);
   if (n1) p2t_triangle_mark_neighbor_tr (ot, n1);
@@ -517,7 +539,7 @@ p2t_sweep_fill_basin (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* node)
       tcx->basin.left_node = node->next;
     }
 
-  // Find the bottom and right node
+  /* Find the bottom and right node */
   tcx->basin.bottom_node = tcx->basin.left_node;
   while (tcx->basin.bottom_node->next
          && tcx->basin.bottom_node->point->y >= tcx->basin.bottom_node->next->point->y)
@@ -526,7 +548,7 @@ p2t_sweep_fill_basin (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* node)
     }
   if (tcx->basin.bottom_node == tcx->basin.left_node)
     {
-      // No valid basin
+      /* No valid basin */
       return;
     }
 
@@ -538,7 +560,7 @@ p2t_sweep_fill_basin (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* node)
     }
   if (tcx->basin.right_node == tcx->basin.bottom_node)
     {
-      // No valid basins
+      /* No valid basins */
       return;
     }
 
@@ -551,7 +573,7 @@ p2t_sweep_fill_basin (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* node)
 void
 p2t_sweep_fill_basin_req (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* node)
 {
-  // if shallow stop filling
+  /* if shallow stop filling */
   if (p2t_sweep_is_shallow (THIS, tcx, node))
     {
       return;
@@ -583,7 +605,7 @@ p2t_sweep_fill_basin_req (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* node)
     }
   else
     {
-      // Continue with the neighbor node with lowest Y value
+      /* Continue with the neighbor node with lowest Y value */
       if (node->prev->point->y < node->next->point->y)
         {
           node = node->prev;
@@ -611,7 +633,7 @@ p2t_sweep_is_shallow (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* node)
       height = tcx->basin.right_node->point->y - node->point->y;
     }
 
-  // if shallow stop filling
+  /* if shallow stop filling */
   if (tcx->basin.width > height)
     {
       return TRUE;
@@ -637,7 +659,7 @@ p2t_sweep_fill_right_above_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2t
 {
   while (node->next->point->x < edge->p->x)
     {
-      // Check if next node is below the edge
+      /* Check if next node is below the edge */
       if (p2t_orient2d (edge->q, node->next->point, edge->p) == CCW)
         {
           p2t_sweep_fill_right_below_edge_event (THIS, tcx, edge, node);
@@ -656,14 +678,14 @@ p2t_sweep_fill_right_below_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2t
     {
       if (p2t_orient2d (node->point, node->next->point, node->next->next->point) == CCW)
         {
-          // Concave
+          /* Concave */
           p2t_sweep_fill_right_concave_edge_event (THIS, tcx, edge, node);
         }
       else
         {
-          // Convex
+          /* Convex */
           p2t_sweep_fill_right_convex_edge_event (THIS, tcx, edge, node);
-          // Retry this one
+          /* Retry this one */
           p2t_sweep_fill_right_below_edge_event (THIS, tcx, edge, node);
         }
     }
@@ -675,18 +697,18 @@ p2t_sweep_fill_right_concave_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P
   p2t_sweep_fill (THIS, tcx, node->next);
   if (node->next->point != edge->p)
     {
-      // Next above or below edge?
+      /* Next above or below edge? */
       if (p2t_orient2d (edge->q, node->next->point, edge->p) == CCW)
         {
-          // Below
+          /* Below */
           if (p2t_orient2d (node->point, node->next->point, node->next->next->point) == CCW)
             {
-              // Next is concave
+              /* Next is concave */
               p2t_sweep_fill_right_concave_edge_event (THIS, tcx, edge, node);
             }
           else
             {
-              // Next is convex
+              /* Next is convex */
             }
         }
     }
@@ -696,24 +718,24 @@ p2t_sweep_fill_right_concave_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P
 void
 p2t_sweep_fill_right_convex_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2tEdge* edge, P2tNode* node)
 {
-  // Next concave or convex?
+  /* Next concave or convex? */
   if (p2t_orient2d (node->next->point, node->next->next->point, node->next->next->next->point) == CCW)
     {
-      // Concave
+      /* Concave */
       p2t_sweep_fill_right_concave_edge_event (THIS, tcx, edge, node->next);
     }
   else
     {
-      // Convex
-      // Next above or below edge?
+      /* Convex
+       * Next above or below edge? */
       if (p2t_orient2d (edge->q, node->next->next->point, edge->p) == CCW)
         {
-          // Below
+          /* Below */
           p2t_sweep_fill_right_convex_edge_event (THIS, tcx, edge, node->next);
         }
       else
         {
-          // Above
+          /* Above */
         }
     }
 }
@@ -723,7 +745,7 @@ p2t_sweep_fill_left_above_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2tE
 {
   while (node->prev->point->x > edge->p->x)
     {
-      // Check if next node is below the edge
+      /* Check if next node is below the edge */
       if (p2t_orient2d (edge->q, node->prev->point, edge->p) == CW)
         {
           p2t_sweep_fill_left_below_edge_event (THIS, tcx, edge, node);
@@ -742,14 +764,14 @@ p2t_sweep_fill_left_below_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2tE
     {
       if (p2t_orient2d (node->point, node->prev->point, node->prev->prev->point) == CW)
         {
-          // Concave
+          /* Concave */
           p2t_sweep_fill_left_concave_edge_event (THIS, tcx, edge, node);
         }
       else
         {
-          // Convex
+          /* Convex */
           p2t_sweep_fill_left_convex_edge_event (THIS, tcx, edge, node);
-          // Retry this one
+          /* Retry this one */
           p2t_sweep_fill_left_below_edge_event (THIS, tcx, edge, node);
         }
     }
@@ -758,24 +780,24 @@ p2t_sweep_fill_left_below_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2tE
 void
 p2t_sweep_fill_left_convex_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2tEdge* edge, P2tNode* node)
 {
-  // Next concave or convex?
+  /* Next concave or convex? */
   if (p2t_orient2d (node->prev->point, node->prev->prev->point, node->prev->prev->prev->point) == CW)
     {
-      // Concave
+      /* Concave */
       p2t_sweep_fill_left_concave_edge_event (THIS, tcx, edge, node->prev);
     }
   else
     {
-      // Convex
-      // Next above or below edge?
+      /* Convex
+       * Next above or below edge? */
       if (p2t_orient2d (edge->q, node->prev->prev->point, edge->p) == CW)
         {
-          // Below
+          /* Below */
           p2t_sweep_fill_left_convex_edge_event (THIS, tcx, edge, node->prev);
         }
       else
         {
-          // Above
+          /* Above */
         }
     }
 }
@@ -786,18 +808,18 @@ p2t_sweep_fill_left_concave_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2
   p2t_sweep_fill (THIS, tcx, node->prev);
   if (node->prev->point != edge->p)
     {
-      // Next above or below edge?
+      /* Next above or below edge? */
       if (p2t_orient2d (edge->q, node->prev->point, edge->p) == CW)
         {
-          // Below
+          /* Below */
           if (p2t_orient2d (node->point, node->prev->point, node->prev->prev->point) == CW)
             {
-              // Next is concave
+              /* Next is concave */
               p2t_sweep_fill_left_concave_edge_event (THIS, tcx, edge, node);
             }
           else
             {
-              // Next is convex
+              /* Next is convex */
             }
         }
     }
@@ -812,15 +834,16 @@ p2t_sweep_flip_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2tPoint* ep, P
 
   if (ot == NULL)
     {
-      // If we want to integrate the fillEdgeEvent do it here
-      // With current implementation we should never get here
-      //throw new RuntimeException( "[BUG:FIXME] FLIP failed due to missing triangle");
+      /* If we want to integrate the fillEdgeEvent do it here
+       * With current implementation we should never get here
+       *throw new RuntimeException( "[BUG:FIXME] FLIP failed due to missing triangle");
+       */
       assert (0);
     }
 
   if (p2t_utils_in_scan_area (p, p2t_triangle_point_ccw (t, p), p2t_triangle_point_cw (t, p), op))
     {
-      // Lets rotate shared edge one vertex CW
+      /* Lets rotate shared edge one vertex CW */
       p2t_sweep_rotate_triangle_pair (THIS, t, p, ot, op);
       p2t_sweepcontext_map_triangle_to_nodes (tcx, t);
       p2t_sweepcontext_map_triangle_to_nodes (tcx, ot);
@@ -836,7 +859,7 @@ p2t_sweep_flip_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2tPoint* ep, P
             }
           else
             {
-              // XXX: I think one of the triangles should be legalized here?
+              /* XXX: I think one of the triangles should be legalized here? */
             }
         }
       else
@@ -857,9 +880,11 @@ p2t_sweep_flip_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2tPoint* ep, P
 P2tTriangle*
 p2t_sweep_next_flip_triangle (P2tSweep *THIS, P2tSweepContext *tcx, int o, P2tTriangle *t, P2tTriangle *ot, P2tPoint* p, P2tPoint* op)
 {
+  int edge_index;
+
   if (o == CCW)
     {
-      // ot is not crossing edge after flip
+      /* ot is not crossing edge after flip */
       int edge_index = p2t_triangle_edge_index (ot, p, op);
       ot->delaunay_edge[edge_index] = TRUE;
       p2t_sweep_legalize (THIS, tcx, ot);
@@ -867,8 +892,8 @@ p2t_sweep_next_flip_triangle (P2tSweep *THIS, P2tSweepContext *tcx, int o, P2tTr
       return t;
     }
 
-  // t is not crossing edge after flip
-  int edge_index = p2t_triangle_edge_index (t, p, op);
+  /* t is not crossing edge after flip */
+  edge_index = p2t_triangle_edge_index (t, p, op);
 
   t->delaunay_edge[edge_index] = TRUE;
   p2t_sweep_legalize (THIS, tcx, t);
@@ -882,17 +907,17 @@ p2t_sweep_next_flip_point (P2tSweep *THIS, P2tPoint* ep, P2tPoint* eq, P2tTriang
   P2tOrientation o2d = p2t_orient2d (eq, op, ep);
   if (o2d == CW)
     {
-      // Right
+      /* Right */
       return p2t_triangle_point_ccw (ot, op);
     }
   else if (o2d == CCW)
     {
-      // Left
+      /* Left */
       return p2t_triangle_point_cw (ot, op);
     }
   else
     {
-      //throw new RuntimeException("[Unsupported] Opposing point on constrained edge");
+      /*throw new RuntimeException("[Unsupported] Opposing point on constrained edge");*/
       assert (0);
     }
 }
@@ -906,23 +931,24 @@ p2t_sweep_flip_scan_edge_event (P2tSweep *THIS, P2tSweepContext *tcx, P2tPoint* 
 
   if (p2t_triangle_neighbor_across (t, p) == NULL)
     {
-      // If we want to integrate the fillEdgeEvent do it here
-      // With current implementation we should never get here
-      //throw new RuntimeException( "[BUG:FIXME] FLIP failed due to missing triangle");
+      /* If we want to integrate the fillEdgeEvent do it here
+       * With current implementation we should never get here
+       *throw new RuntimeException( "[BUG:FIXME] FLIP failed due to missing triangle");
+       */
       assert (0);
     }
 
   if (p2t_utils_in_scan_area (eq, p2t_triangle_point_ccw (flip_triangle, eq), p2t_triangle_point_cw (flip_triangle, eq), op))
     {
-      // flip with new edge op->eq
+      /* flip with new edge op->eq */
       p2t_sweep_flip_edge_event (THIS, tcx, eq, op, ot, op);
-      // TODO: Actually I just figured out that it should be possible to
-      //       improve this by getting the next ot and op before the the above
-      //       flip and continue the flipScanEdgeEvent here
-      // set new ot and op here and loop back to inScanArea test
-      // also need to set a new flip_triangle first
-      // Turns out at first glance that this is somewhat complicated
-      // so it will have to wait.
+      /* TODO: Actually I just figured out that it should be possible to
+       *       improve this by getting the next ot and op before the the above
+       *       flip and continue the flipScanEdgeEvent here
+       * set new ot and op here and loop back to inScanArea test
+       * also need to set a new flip_triangle first
+       * Turns out at first glance that this is somewhat complicated
+       * so it will have to wait. */
     }
   else
     {

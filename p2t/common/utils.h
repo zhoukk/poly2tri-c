@@ -37,7 +37,7 @@
 #include "cutils.h"
 #include "shapes.h"
 
-#define PI_3div4 (3 * M_PI / 4)
+#define PI_3div4 (3 * G_PI / 4)
 #define EPSILON  (1e-6)
 
 typedef enum

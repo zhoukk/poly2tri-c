@@ -85,7 +85,7 @@ p2t_sweepcontext_destroy (P2tSweepContext* THIS)
 {
   GList* iter;
   int i;
-  // Clean up memory
+  /* Clean up memory */
 
   p2t_point_free (THIS->head_);
   p2t_point_free (THIS->tail_);
@@ -155,8 +155,9 @@ p2t_sweepcontext_init_triangulation (P2tSweepContext *THIS)
   int i;
   double xmax = point_index (THIS->points_, 0)->x, xmin = point_index (THIS->points_, 0)->x;
   double ymax = point_index (THIS->points_, 0)->y, ymin = point_index (THIS->points_, 0)->y;
+  double dx, dy;
 
-  // Calculate bounds.
+  /* Calculate bounds. */
   for (i = 0; i < THIS->points_->len; i++)
     {
       P2tPoint* p = point_index (THIS->points_, i);
@@ -170,12 +171,12 @@ p2t_sweepcontext_init_triangulation (P2tSweepContext *THIS)
         ymin = p->y;
     }
 
-  double dx = kAlpha * (xmax - xmin);
-  double dy = kAlpha * (ymax - ymin);
+  dx = kAlpha * (xmax - xmin);
+  dy = kAlpha * (ymax - ymin);
   THIS->head_ = p2t_point_new_dd (xmax + dx, ymin - dy);
   THIS->tail_ = p2t_point_new_dd (xmin - dx, ymin - dy);
 
-  // Sort points along y-axis
+  /* Sort points along y-axis */
   g_ptr_array_sort (THIS->points_, p2t_point_cmp);
 }
 
@@ -184,7 +185,7 @@ p2t_sweepcontext_init_edges (P2tSweepContext *THIS, P2tPointPtrArray polyline)
 {
   int i;
   int num_points = polyline->len;
-  g_ptr_array_set_size (THIS->edge_list, THIS->edge_list->len + num_points); // C-OPTIMIZATION
+  g_ptr_array_set_size (THIS->edge_list, THIS->edge_list->len + num_points); /* C-OPTIMIZATION */
   for (i = 0; i < num_points; i++)
     {
       int j = i < num_points - 1 ? i + 1 : 0;
@@ -207,15 +208,14 @@ p2t_sweepcontext_add_to_map (P2tSweepContext *THIS, P2tTriangle* triangle)
 P2tNode*
 p2t_sweepcontext_locate_node (P2tSweepContext *THIS, P2tPoint* point)
 {
-  // TODO implement search tree
+  /* TODO implement search tree */
   return p2t_advancingfront_locate_node (THIS->front_, point->x);
 }
 
 void
 p2t_sweepcontext_create_advancingfront (P2tSweepContext *THIS, P2tNodePtrArray nodes)
 {
-
-  // Initial triangle
+  /* Initial triangle */
   P2tTriangle* triangle = p2t_triangle_new (point_index (THIS->points_, 0), THIS->tail_, THIS->head_);
 
   THIS->map_ = g_list_append (THIS->map_, triangle);
@@ -225,8 +225,8 @@ p2t_sweepcontext_create_advancingfront (P2tSweepContext *THIS, P2tNodePtrArray n
   THIS->af_tail_ = p2t_node_new_pt (p2t_triangle_get_point (triangle, 2));
   THIS->front_ = p2t_advancingfront_new (THIS->af_head_, THIS->af_tail_);
 
-  // TODO: More intuitive if head is middles next and not previous?
-  //       so swap head and tail
+  /* TODO: More intuitiv if head is middles next and not previous?
+   *       so swap head and tail */
   THIS->af_head_->next = THIS->af_middle_;
   THIS->af_middle_->next = THIS->af_tail_;
   THIS->af_middle_->prev = THIS->af_head_;

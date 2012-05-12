@@ -74,17 +74,20 @@ p2t_utils_in_scan_area (P2tPoint* pa, P2tPoint* pb, P2tPoint* pc, P2tPoint* pd)
   double bdxady = bdx * ady;
   double oabd = adxbdy - bdxady;
 
+  double cdx, cdy;
+  double cdxady, adxcdy, ocad;
+
   if (oabd <= EPSILON)
     {
       return FALSE;
     }
 
-  double cdx = pc->x - pdx;
-  double cdy = pc->y - pdy;
+  cdx = pc->x - pdx;
+  cdy = pc->y - pdy;
 
-  double cdxady = cdx * ady;
-  double adxcdy = adx * cdy;
-  double ocad = cdxady - adxcdy;
+  cdxady = cdx * ady;
+  adxcdy = adx * cdy;
+  ocad = cdxady - adxcdy;
 
   if (ocad <= EPSILON)
     {

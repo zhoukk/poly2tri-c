@@ -134,7 +134,7 @@ p2t_advancingfront_locate_node (P2tAdvancingFront *THIS, const double x)
 P2tNode*
 p2t_advancingfront_find_search_node (P2tAdvancingFront *THIS, const double x)
 {
-  // TODO: implement BST index
+  /* TODO: implement BST index */
   return THIS->search_node_;
 }
 
@@ -149,7 +149,7 @@ p2t_advancingfront_locate_point (P2tAdvancingFront *THIS, const P2tPoint* point)
     {
       if (point != node->point)
         {
-          // We might have two nodes with same x value for a short time
+          /* We might have two nodes with same x value for a short time */
           if (point == node->prev->point)
             {
               node = node->prev;
