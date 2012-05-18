@@ -22,6 +22,10 @@ P2trMesh*     p2tr_mesh_new             (void);
 P2trPoint*    p2tr_mesh_new_point       (P2trMesh          *mesh,
                                          const P2trVector2 *c);
 
+P2trPoint*    p2tr_mesh_new_point2      (P2trMesh  *mesh,
+                                         gdouble    x,
+                                         gdouble    y);
+
 P2trEdge*     p2tr_mesh_new_edge        (P2trMesh  *mesh,
                                          P2trPoint *start,
                                          P2trPoint *end,

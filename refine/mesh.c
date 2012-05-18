@@ -36,6 +36,17 @@ p2tr_mesh_new_point (P2trMesh          *self,
   return pt;
 }
 
+P2trPoint*
+p2tr_mesh_new_point2 (P2trMesh *self,
+                      gdouble   x,
+                      gdouble   y)
+{
+  P2trVector2 c;
+  c.x = x;
+  c.y = y;
+  return p2tr_mesh_new_point (self, &c);
+}
+
 P2trEdge*
 p2tr_mesh_new_edge (P2trMesh  *self,
                     P2trPoint *start,
@@ -46,6 +57,8 @@ p2tr_mesh_new_edge (P2trMesh  *self,
 
   p2tr_hash_set_insert (self->edges, ed);
   p2tr_edge_ref (ed);
+  p2tr_hash_set_insert (self->edges, ed->mirror);
+  p2tr_edge_ref (ed->mirror);
 
   return ed;
 }
@@ -74,7 +87,6 @@ p2tr_mesh_new_triangle (P2trMesh *self,
 
   p2tr_hash_set_insert (self->triangles, tr);
   p2tr_triangle_ref (tr);
-
   return tr;
 }
 
