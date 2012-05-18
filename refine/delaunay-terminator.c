@@ -397,10 +397,18 @@ LOG2 (gdouble v)
 static gboolean
 TolerantIsPowerOfTwoLength (gdouble length)
 {
-    gdouble exp = LOG2 (length);
-    gdouble intpart, frac = modf (exp, &intpart);
-    
-    return ABS(frac) < 0.05;
+  gdouble exp = LOG2 (length);
+  gdouble intpart, frac = modf (exp, &intpart);
+  gdouble distance;
+
+  /* If the length is a negative power of 2, the returned fraction will be
+   * negative */
+  frac = ABS(frac);
+
+  /* Find how close is exp to the closest integer */
+  distance = MIN(frac, 1-frac);
+
+  return distance < 0.05;
 }
 
 static void
