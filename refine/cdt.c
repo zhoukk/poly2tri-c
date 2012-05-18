@@ -365,14 +365,6 @@ p2tr_cdt_triangulate_fan (P2trCDT   *self,
   return new_tris;
 }
 
-/**
- * Insert a point so that is splits an existing edge. This function
- * assumes that the point is on the edge itself and between its
- * end-points.
- * If the edge being split is constrained, then the function returns a
- * list containing both parts resulted from the splitting. In that case,
- * THE RETURNED EDGES MUST BE UNREFERENCED!
- */
 GList*
 p2tr_cdt_split_edge (P2trCDT   *self,
                      P2trEdge  *e,
