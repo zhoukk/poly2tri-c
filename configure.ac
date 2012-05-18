@@ -27,14 +27,22 @@ LT_INIT
 # Find a C compiler
 AC_PROG_CC
 
+# Finding a function which may be built-in in GCC is known to fail when using
+# -Werror, so we will only add that option afterwards. For more information, see
+# the discussion at http://lists.gnu.org/archive/html/bug-autoconf/2010-01/msg00031.html
+
 # Pedantic errors please
-CFLAGS="$CFLAGS -Wall -Werror -ansi -pedantic"
+CFLAGS="$CFLAGS -Wall -ansi -pedantic"
 
 # Find the standard math functions
 # Taken from http://www.flameeyes.eu/autotools-mythbuster/autoconf/finding.html
+AC_CHECK_HEADERS([math.h])
 AC_SEARCH_LIBS([log10], [m], [], [
   AC_MSG_ERROR([unable to find the log10() function])
 ])
+
+# Warnings as errors please
+CFLAGS="$CFLAGS -Werror"
 
 # Find GLib support via pkg-config
 PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.28])
