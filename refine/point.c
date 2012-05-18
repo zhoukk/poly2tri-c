@@ -71,7 +71,7 @@ p2tr_point_get_edge_to (P2trPoint *start,
     if (result == NULL)
       p2tr_exception_programmatic ("Tried to get an edge that doesn't exist!");
     else
-      return result;
+      return p2tr_edge_ref (result);
 }
 
 void
@@ -113,6 +113,7 @@ p2tr_point_edge_ccw (P2trPoint *self,
                      P2trEdge  *e)
 {
   GList *node;
+  P2trEdge *result;
 
   if (P2TR_EDGE_START(e) != self)
       p2tr_exception_programmatic ("Not an edge of this point!");
@@ -122,7 +123,8 @@ p2tr_point_edge_ccw (P2trPoint *self,
     p2tr_exception_programmatic ("Could not find the CCW sibling edge"
         "because the edge is not present in the outgoing-edges list!");
 
-    return (P2trEdge*) g_list_cyclic_next (self->outgoing_edges, node);
+  result = (P2trEdge*) g_list_cyclic_next (self->outgoing_edges, node);
+  return p2tr_edge_ref (result);
 }
 
 P2trEdge*
@@ -130,6 +132,7 @@ p2tr_point_edge_cw (P2trPoint* self,
                     P2trEdge *e)
 {
   GList *node;
+  P2trEdge *result;
 
   if (P2TR_EDGE_START(e) != self)
       p2tr_exception_programmatic ("Not an edge of this point!");
@@ -139,7 +142,8 @@ p2tr_point_edge_cw (P2trPoint* self,
     p2tr_exception_programmatic ("Could not find the CW sibling edge"
         "because the edge is not present in the outgoing-edges list!");
 
-    return (P2trEdge*) g_list_cyclic_prev (self->outgoing_edges, node);
+  result = (P2trEdge*) g_list_cyclic_prev (self->outgoing_edges, node);
+  return p2tr_edge_ref (result);
 }
 
 gboolean
@@ -164,10 +168,16 @@ p2tr_point_has_constrained_edge (P2trPoint *self)
   return FALSE;
 }
 
-void
+/**
+ * Increase the reference count of the given input point
+ * @param self - The point to ref
+ * @return The point given
+ */
+P2trPoint*
 p2tr_point_ref (P2trPoint *self)
 {
   ++self->refcount;
+  return self;
 }
 
 void
@@ -180,5 +190,8 @@ p2tr_point_unref (P2trPoint *self)
 P2trMesh*
 p2tr_point_get_mesh (P2trPoint *self)
 {
-  return self->mesh;
+  if (self->mesh)
+    return p2tr_mesh_ref (self->mesh);
+  else
+    return NULL;
 }

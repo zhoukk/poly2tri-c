@@ -62,7 +62,7 @@ void          p2tr_mesh_destroy         (P2trMesh *mesh);
 
 void          p2tr_mesh_unref           (P2trMesh *mesh);
 
-void          p2tr_mesh_ref             (P2trMesh *mesh);
+P2trMesh*     p2tr_mesh_ref             (P2trMesh *mesh);
 
 P2trTriangle* p2tr_mesh_find_point      (P2trMesh *self,
                                          const P2trVector2 *pt);

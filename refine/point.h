@@ -31,7 +31,7 @@ P2trPoint*  p2tr_point_new                  (const P2trVector2 *c);
 
 P2trPoint*  p2tr_point_new2                 (gdouble x, gdouble y);
 
-void        p2tr_point_ref                  (P2trPoint *self);
+P2trPoint*  p2tr_point_ref                  (P2trPoint *self);
 
 void        p2tr_point_unref                (P2trPoint *self);
 

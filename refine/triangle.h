@@ -20,7 +20,7 @@ P2trTriangle*   p2tr_triangle_new            (P2trEdge *AB,
                                               P2trEdge *BC,
                                               P2trEdge *CA);
 
-void        p2tr_triangle_ref                (P2trTriangle *self);
+P2trTriangle* p2tr_triangle_ref              (P2trTriangle *self);
 
 void        p2tr_triangle_unref              (P2trTriangle *self);
 

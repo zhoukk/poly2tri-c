@@ -47,7 +47,7 @@ P2trEdge*   p2tr_edge_new                  (P2trPoint *start,
                                             P2trPoint *end,
                                             gboolean   constrained);
 
-void        p2tr_edge_ref                  (P2trEdge *self);
+P2trEdge*   p2tr_edge_ref                  (P2trEdge *self);
 
 void        p2tr_edge_unref                (P2trEdge *self);
 

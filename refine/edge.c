@@ -44,10 +44,11 @@ p2tr_edge_new (P2trPoint *start,
   return self;
 }
 
-void
+P2trEdge*
 p2tr_edge_ref (P2trEdge *self)
 {
   ++self->refcount;
+  return self;
 }
 
 void
@@ -122,7 +123,7 @@ P2trMesh*
 p2tr_edge_get_mesh (P2trEdge *self)
 {
   if (self->end != NULL)
-    return self->end->mesh;
+    return p2tr_point_get_mesh (self->end);
   else
     return NULL;
 }

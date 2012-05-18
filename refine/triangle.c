@@ -75,10 +75,11 @@ p2tr_triangle_new (P2trEdge *AB,
   return self;
 }
 
-void
+P2trTriangle*
 p2tr_triangle_ref (P2trTriangle *self)
 {
   ++self->refcount;
+  return self;
 }
 
 void
@@ -139,11 +140,11 @@ p2tr_triangle_get_opposite_point (P2trTriangle *self,
                                   P2trEdge     *e)
 {
   if (self->edges[0] == e || self->edges[0]->mirror == e)
-    return self->edges[1]->end;
+    return p2tr_point_ref (self->edges[1]->end);
   if (self->edges[1] == e || self->edges[1]->mirror == e)
-    return self->edges[2]->end;
+    return p2tr_point_ref (self->edges[2]->end);
   if (self->edges[2] == e || self->edges[2]->mirror == e)
-    return self->edges[0]->end;
+    return p2tr_point_ref (self->edges[0]->end);
 
   p2tr_exception_programmatic ("The edge is not in the triangle!");
 }
@@ -153,11 +154,11 @@ p2tr_triangle_get_opposite_edge (P2trTriangle *self,
                                  P2trPoint    *p)
 {
   if (self->edges[0]->end == p)
-    return self->edges[2];
+    return p2tr_edge_ref (self->edges[2]);
   if (self->edges[1]->end == p)
-    return self->edges[0];
+    return p2tr_edge_ref (self->edges[0]);
   if (self->edges[2]->end == p)
-    return self->edges[1];
+    return p2tr_edge_ref (self->edges[1]);
 
   p2tr_exception_programmatic ("The point is not in the triangle!");
 }

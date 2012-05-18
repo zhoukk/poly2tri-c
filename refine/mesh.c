@@ -168,10 +168,11 @@ p2tr_mesh_unref (P2trMesh *self)
     p2tr_mesh_free (self);
 }
 
-void
+P2trMesh*
 p2tr_mesh_ref (P2trMesh *self)
 {
   ++self->refcount;
+  return self;
 }
 
 P2trTriangle*
@@ -194,7 +195,7 @@ p2tr_mesh_find_point2 (P2trMesh          *self,
   p2tr_hash_set_iter_init (&iter, self->triangles);
   while (p2tr_hash_set_iter_next (&iter, (gpointer*)&result))
     if (p2tr_triangle_contains_point2 (result, pt, u, v) != P2TR_INTRIANGLE_OUT)
-      return result;
+      return p2tr_triangle_ref (result);
 
   return NULL;
 }
@@ -249,6 +250,9 @@ p2tr_mesh_find_point_local2 (P2trMesh          *self,
 
   p2tr_hash_set_free (checked_tris);
   g_queue_clear (&to_check);
+
+  if (result != NULL)
+    p2tr_triangle_ref (result);
 
   return result;
 }
