@@ -30,7 +30,27 @@ static gboolean  p2tr_cdt_try_flip                (P2trCDT   *self,
 static void      p2tr_cdt_on_new_point            (P2trCDT   *self,
                                                    P2trPoint *pt);
 
-P2trCDT* p2tr_cdt_new (P2tCDT *cdt)
+void
+p2tr_cdt_validate_unused (P2trCDT* self)
+{
+  P2trEdge *ed;
+  P2trTriangle *tri;
+  P2trHashSetIter iter;
+
+  p2tr_hash_set_iter_init (&iter, self->mesh->edges);
+  while (p2tr_hash_set_iter_next (&iter, (gpointer*)&ed))
+    {
+      g_assert (ed->mirror != NULL);
+      g_assert (! p2tr_edge_is_removed (ed));
+    }
+
+  p2tr_hash_set_iter_init (&iter, self->mesh->triangles);
+  while (p2tr_hash_set_iter_next (&iter, (gpointer*)&tri))
+    g_assert (! p2tr_triangle_is_removed (tri));
+}
+
+P2trCDT*
+p2tr_cdt_new (P2tCDT *cdt)
 {
   P2tTrianglePtrArray cdt_tris = p2t_cdt_get_triangles (cdt);
   GHashTable *point_map = g_hash_table_new (g_direct_hash, g_direct_equal);
@@ -52,7 +72,7 @@ P2trCDT* p2tr_cdt_new (P2tCDT *cdt)
 
         if (new_pt == NULL)
           {
-            new_pt = p2tr_point_new2 (cdt_pt->x, cdt_pt->y);
+            new_pt = p2tr_mesh_new_point2 (rmesh->mesh, cdt_pt->x, cdt_pt->y);
             g_hash_table_insert (point_map, cdt_pt, new_pt);
           }
       }
@@ -222,6 +242,8 @@ p2tr_cdt_insert_point (P2trCDT           *self,
   gboolean      inserted = FALSE;
   gint          i;
 
+  p2tr_cdt_validate_unused (self);
+
   if (point_location_guess == NULL)
     tri = p2tr_mesh_find_point (self->mesh, pc);
   else
@@ -251,6 +273,7 @@ p2tr_cdt_insert_point (P2trCDT           *self,
 
   p2tr_cdt_on_new_point (self, pt);
 
+  p2tr_cdt_validate_unused (self);
   return pt;
 }
 
@@ -372,6 +395,8 @@ p2tr_cdt_split_edge (P2trCDT   *self,
   P2trEdge  *XC, *CY;
   GList     *new_tris = NULL, *fan = NULL, *new_edges = NULL;
 
+  p2tr_cdt_validate_unused (self);
+
   p2tr_edge_remove (e);
 
   XC = p2tr_mesh_new_edge (self->mesh, X, C, constrained);
@@ -407,6 +432,7 @@ p2tr_cdt_split_edge (P2trCDT   *self,
     }
 
   p2tr_cdt_on_new_point (self, C);
+  p2tr_cdt_validate_unused (self);
 
   return new_edges;
 }
@@ -442,6 +468,8 @@ p2tr_cdt_flip_fix (P2trCDT *self,
 {
   GQueue flipped_edges, tris_to_fix;
   GList *iter;
+
+  p2tr_cdt_validate_unused (self);
 
   g_queue_init (&flipped_edges);
   g_queue_init (&tris_to_fix);
@@ -495,6 +523,7 @@ p2tr_cdt_flip_fix (P2trCDT *self,
       e->delaunay = e->mirror->delaunay = FALSE;
       p2tr_edge_unref (e);
     }
+  p2tr_cdt_validate_unused (self);
 }
 
 /**
@@ -520,7 +549,7 @@ p2tr_cdt_try_flip (P2trCDT   *self,
   P2trTriangle *ABC, *ADB;
   P2trEdge *DC;
 
-  new_edge = NULL;
+  *new_edge = NULL;
 
   if (to_flip->constrained || to_flip->delaunay)
     {

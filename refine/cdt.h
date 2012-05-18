@@ -11,6 +11,8 @@ typedef struct
   P2trPSLG *outline;
 } P2trCDT;
 
+void        p2tr_cdt_validate_unused (P2trCDT* self);
+
 P2trCDT*    p2tr_cdt_new (P2tCDT *cdt);
 
 gboolean    p2tr_cdt_visible_from_edge (P2trCDT     *self,
