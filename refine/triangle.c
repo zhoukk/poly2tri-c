@@ -9,15 +9,18 @@
 #include "triangle.h"
 #include "mesh.h"
 
-P2trTriangle*
-p2tr_triangle_new (P2trEdge *AB,
-                   P2trEdge *BC,
-                   P2trEdge *CA)
+void
+p2tr_validate_edges_can_form_tri (P2trEdge *AB,
+                                  P2trEdge *BC,
+                                  P2trEdge *CA)
 {
-  gint i;
-  P2trTriangle *self = g_slice_new (P2trTriangle);
+  if (AB != AB->mirror->mirror ||
+      BC != BC->mirror->mirror ||
+      CA != CA->mirror->mirror)
+    {
+      p2tr_exception_programmatic ("Bad edge mirroring!");
+    }
 
-#ifndef P2TC_NO_LOGIC_CHECKS
   if (AB->end != P2TR_EDGE_START(BC)
       || BC->end != P2TR_EDGE_START(CA)
       || CA->end != P2TR_EDGE_START(AB))
@@ -29,6 +32,18 @@ p2tr_triangle_new (P2trEdge *AB,
     {
       p2tr_exception_programmatic ("Repeated edge in a triangle!");
     }
+}
+
+P2trTriangle*
+p2tr_triangle_new (P2trEdge *AB,
+                   P2trEdge *BC,
+                   P2trEdge *CA)
+{
+  gint i;
+  P2trTriangle *self = g_slice_new (P2trTriangle);
+
+#ifndef P2TC_NO_LOGIC_CHECKS
+  p2tr_validate_edges_can_form_tri (AB, BC, CA);
 #endif
 
   switch (p2tr_math_orient2d(&CA->end->c, &AB->end->c, &BC->end->c))
@@ -49,7 +64,9 @@ p2tr_triangle_new (P2trEdge *AB,
         p2tr_exception_geometric ("Can't make a triangle of linear points!");
     }
 
-#ifdef P2TC_DEBUG_CHECKS
+#ifndef P2TC_NO_LOGIC_CHECKS
+  p2tr_validate_edges_can_form_tri (self->edges[0], self->edges[1], self->edges[2]);
+
   if (p2tr_math_orient2d (&P2TR_TRIANGLE_GET_POINT(self,0)->c,
                           &P2TR_TRIANGLE_GET_POINT(self,1)->c,
                           &P2TR_TRIANGLE_GET_POINT(self,2)->c) != P2TR_ORIENTATION_CW)
@@ -60,7 +77,7 @@ p2tr_triangle_new (P2trEdge *AB,
 
   for (i = 0; i < 3; i++)
     {
-#ifdef P2TC_DEBUG_CHECKS
+#ifndef P2TC_NO_LOGIC_CHECKS
       if (self->edges[i]->tri != NULL)
         p2tr_exception_programmatic ("This edge is already in use by "
             "another triangle!");

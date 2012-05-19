@@ -115,8 +115,21 @@ ChooseSplitVertex(P2trEdge *e, P2trVector2 *dst);
 static inline gint
 triangle_quality_compare (P2trTriangle *t1, P2trTriangle *t2)
 {
-  gdouble a1 = p2tr_triangle_smallest_non_constrained_angle (t1);
-  gdouble a2 = p2tr_triangle_smallest_non_constrained_angle (t2);
+  gdouble a1, a2;
+  gboolean r1, r2;
+
+  r1 = p2tr_triangle_is_removed (t1);
+  r2 = p2tr_triangle_is_removed (t2);
+
+  /* TODO: untill we make sure that removed triangles will get out
+   * of Qt, we will make the comparision treat removed triangles as
+   * triangles with "less" quality (meaning they are "smaller")
+   */
+  if (r1 || r2)
+    return (r1) ? -1 : (r2 ? 1 : 0);
+
+  a1 = p2tr_triangle_smallest_non_constrained_angle (t1);
+  a2 = p2tr_triangle_smallest_non_constrained_angle (t2);
   
   return (a1 < a2) ? -1 : ((a1 == a2) ? 0 : 1);
 }
@@ -202,22 +215,27 @@ p2tr_dt_refine (P2trDelaunayTerminator *self,
   P2trHashSetIter hs_iter;
   P2trEdge *s;
   P2trTriangle *t;
-  gint steps;
+  gint steps = 0;
   
+  p2tr_cdt_validate_cdt(self->mesh);
+
+  if (steps++ >= max_steps)
+    return;
+
   p2tr_hash_set_iter_init (&hs_iter, self->mesh->mesh->edges);
     while (p2tr_hash_set_iter_next (&hs_iter, (gpointer*)&s))
     if (s->constrained && p2tr_cdt_is_encroached (s))
       p2tr_dt_enqueue_segment (self, s);
 
   SplitEncroachedSubsegments (self, 0, p2tr_dt_false_too_big);
+  p2tr_cdt_validate_cdt(self->mesh);
 
   p2tr_hash_set_iter_init (&hs_iter, self->mesh->mesh->triangles);
   while (p2tr_hash_set_iter_next (&hs_iter, (gpointer*)&t))
     if (p2tr_triangle_smallest_non_constrained_angle (t) < self->theta)
       p2tr_dt_enqueue_tri (self, t);
 
-  steps = 0;
-  while (! p2tr_dt_tri_queue_is_empty (self) && steps < max_steps)
+  while (! p2tr_dt_tri_queue_is_empty (self) && steps++ < max_steps)
     {
       t = p2tr_dt_dequeue_tri (self);
 
@@ -227,7 +245,8 @@ p2tr_dt_refine (P2trDelaunayTerminator *self,
           P2trVector2 *c;
           P2trTriangle *triContaining_c_NOREF;
           P2trHashSet *E;
-          
+
+          p2tr_cdt_validate_cdt (self->mesh);
           p2tr_triangle_get_circum_circle (t, &tCircum);
           c = &tCircum.center;
 
