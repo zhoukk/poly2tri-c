@@ -291,9 +291,9 @@ p2tr_cdt_insert_point_into_triangle (P2trCDT      *self,
   P2trPoint *B = tri->edges[1]->end;
   P2trPoint *C = tri->edges[2]->end;
 
-  P2trEdge *CA = tri->edges[1];
-  P2trEdge *AB = tri->edges[2];
-  P2trEdge *BC = tri->edges[0];
+  P2trEdge *CA = tri->edges[0];
+  P2trEdge *AB = tri->edges[1];
+  P2trEdge *BC = tri->edges[2];
 
   P2trEdge *AP, *BP, *CP;
 
