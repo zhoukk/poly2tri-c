@@ -186,7 +186,7 @@ P2trOrientation p2tr_math_orient2d (const P2trVector2 *A,
 
   if (result > ORIENT2D_EPSILON)
     return P2TR_ORIENTATION_CCW;
-  else if (result < ORIENT2D_EPSILON)
+  else if (result < -ORIENT2D_EPSILON)
     return P2TR_ORIENTATION_CW;
   else
     return P2TR_ORIENTATION_LINEAR;
