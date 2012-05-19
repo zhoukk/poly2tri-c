@@ -242,9 +242,6 @@ gint main (int argc, char *argv[])
       exit (1);
     }
 
-  g_free (buf);
-  buf = NULL;
-
   imc.cpp = 4;
   imc.min_x = imc.min_y = 0;
   imc.step_x = imc.step_y = 0.2;
