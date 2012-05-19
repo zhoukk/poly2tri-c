@@ -216,18 +216,23 @@ p2tr_mesh_find_point_local2 (P2trMesh          *self,
                              gdouble           *u,
                              gdouble           *v)
 {
-  P2trHashSet *checked_tris = p2tr_hash_set_new_default ();
+  P2trHashSet *checked_tris;
   GQueue to_check;
   P2trTriangle *result = NULL;
-  
+
+  if (initial_guess == NULL)
+    return p2tr_mesh_find_point2(self, pt, u, v);
+
+  checked_tris = p2tr_hash_set_new_default ();
   g_queue_init (&to_check);
-  
+  g_queue_push_head (&to_check, initial_guess);
+
   while (! g_queue_is_empty (&to_check))
     {
       P2trTriangle *tri = (P2trTriangle*) g_queue_pop_head (&to_check);
       
       p2tr_hash_set_insert (checked_tris, tri);
-      if (p2tr_triangle_contains_point2 (tri, pt, u, v))
+      if (p2tr_triangle_contains_point2 (tri, pt, u, v) != P2TR_INTRIANGLE_OUT)
         {
           result = tri;
           break;
