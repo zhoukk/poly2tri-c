@@ -264,13 +264,19 @@ gint main (int argc, char *argv[])
 
   rcdt = p2tr_cdt_new (cdt);
   p2t_cdt_free (cdt);
-  
-  dt = p2tr_dt_new (G_PI / 6, p2tr_dt_false_too_big, rcdt);
-  p2tr_dt_refine (dt, refine_max_steps);
+
+  if (refine_max_steps > 0)
+    {
+      g_print ("Refining the mesh!\n"); 
+      dt = p2tr_dt_new (G_PI / 6, p2tr_dt_false_too_big, rcdt);
+      p2tr_dt_refine (dt, refine_max_steps);
+      p2tr_dt_free (dt);
+    }
 
   if (render_svg)
     {
-      p2tr_plot_svg (dt->mesh->mesh, svg_out);
+      g_print ("Rendering SVG outline!");
+      p2tr_plot_svg (rcdt->mesh, svg_out);
       fclose (svg_out);
     }
 
@@ -279,6 +285,8 @@ gint main (int argc, char *argv[])
       P2trImageConfig imc;
       gfloat *im;
 
+      g_print ("Rendering color interpolation!");
+
       imc.cpp = 4;
       imc.min_x = imc.min_y = 0;
       imc.step_x = imc.step_y = 0.2;
@@ -286,7 +294,7 @@ gint main (int argc, char *argv[])
 
       im = g_new (gfloat, imc.cpp * imc.x_samples * imc.y_samples);
 
-      p2tr_mesh_render_scanline (dt->mesh->mesh, im, &imc, test_point_to_color, NULL);
+      p2tr_mesh_render_scanline (rcdt->mesh, im, &imc, test_point_to_color, NULL);
 
       p2tr_write_ppm (mesh_out, im, &imc);
       fclose (mesh_out);
@@ -294,7 +302,6 @@ gint main (int argc, char *argv[])
       g_free (im);
     }
 
-  p2tr_dt_free (dt);
   p2tr_cdt_free (rcdt);
   free_read_results (&pts, &colors);
 
