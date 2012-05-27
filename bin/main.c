@@ -157,6 +157,23 @@ read_points_file (const gchar       *path,
     g_print ("Read %d points and %d colors\n", countPts, countCls);
 }
 
+void
+free_read_results (P2tPointPtrArray  *points,
+                   GArray           **colors)
+{
+  gint i;
+
+  if (points != NULL)
+    {
+      for (i = 0; i < (*points)->len; i++)
+        p2t_point_free (point_index (*points, i));
+      g_ptr_array_free (*points, TRUE);
+    }
+
+  if (colors != NULL)
+    g_array_free (*colors, TRUE);
+}
+
 /* Calculate a "deterministic random" color for each point
  * based on its memory address. Since we know that least-significant bytes
  * of the point address will change more than the mor-important ones, we
@@ -279,9 +296,7 @@ gint main (int argc, char *argv[])
 
   p2tr_dt_free (dt);
   p2tr_cdt_free (rcdt);
+  free_read_results (&pts, &colors);
 
-  g_ptr_array_free (pts, TRUE);
-  g_array_free (colors, TRUE);
-  
   return 0;
 }
