@@ -96,6 +96,7 @@ p2tr_edge_remove (P2trEdge *self)
   {
     p2tr_mesh_on_edge_removed (mesh, self);
     p2tr_mesh_on_edge_removed (mesh, self->mirror);
+    p2tr_mesh_unref (mesh); /* The get function reffed it */
   }
 }
 

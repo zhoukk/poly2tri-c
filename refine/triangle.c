@@ -134,7 +134,10 @@ p2tr_triangle_remove (P2trTriangle *self)
   }
 
   if (mesh != NULL)
-    p2tr_mesh_on_triangle_removed (mesh, self);
+    {
+      p2tr_mesh_on_triangle_removed (mesh, self);
+      p2tr_mesh_unref (mesh); /* The get function reffed it */
+    }
 }
 
 P2trMesh*
