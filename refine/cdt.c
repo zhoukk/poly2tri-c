@@ -129,7 +129,18 @@ p2tr_cdt_new (P2tCDT *cdt)
     p2tr_triangle_unref (new_tri);
   }
 
+  g_hash_table_destroy (point_map);
+
   return rmesh;
+}
+
+void
+p2tr_cdt_free (P2trCDT* self)
+{
+  p2tr_pslg_free (self->outline);
+  p2tr_mesh_unref (self->mesh);
+
+  g_slice_free (P2trCDT, self);
 }
 
 void

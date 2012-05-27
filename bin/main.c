@@ -47,6 +47,8 @@ static gboolean debug_print = TRUE;
 static gboolean verbose = TRUE;
 static gchar *input_file = NULL;
 static gchar *output_file = NULL;
+static gboolean render_mesh = FALSE;
+static gboolean render_svg = FALSE;
 
 static GOptionEntry entries[] =
 {
@@ -55,6 +57,8 @@ static GOptionEntry entries[] =
   { "debug",            'd', 0, G_OPTION_ARG_NONE,     &debug_print,      "Enable debug printing",             NULL },
   { "input",            'i', 0, G_OPTION_ARG_FILENAME, &input_file,       "Use input file at FILE_IN",         "FILE_IN" },
   { "output",           'o', 0, G_OPTION_ARG_FILENAME, &output_file,      "Use output file at FILE_OUT",       "FILE_OUT" },
+  { "render-mesh",      'm', 0, G_OPTION_ARG_NONE,     &render_mesh,      "Render a color mesh of the result", NULL },
+  { "render-svg",       's', 0, G_OPTION_ARG_NONE,     &render_svg,       "Render an outline of the result",   NULL },
   { NULL }
 };
 
@@ -170,7 +174,9 @@ test_point_to_color (P2trPoint* point, gfloat *dest, gpointer user_data)
 
 gint main (int argc, char *argv[])
 {
-  FILE *out;
+  FILE *svg_out = NULL, *mesh_out = NULL;
+  gchar *svg_out_path, *mesh_out_path;
+
   GError *error = NULL;
   GOptionContext *context;
 
@@ -180,10 +186,6 @@ gint main (int argc, char *argv[])
   P2tCDT *cdt;
   P2trCDT *rcdt;
   P2trDelaunayTerminator *dt;
-
-  gchar *buf;
-  gfloat *im;
-  P2trImageConfig imc;
 
   context = g_option_context_new ("- Create a fine mesh from a given PSLG");
   g_option_context_add_main_entries (context, entries, NULL);
@@ -206,16 +208,34 @@ gint main (int argc, char *argv[])
       exit (1);
     }
 
-  if (output_file == NULL)
+  if (output_file == NULL && (render_svg || render_mesh))
     {
       g_print ("No output file given. Stop.");
       exit (1);
     }
 
-  if ((out = fopen (output_file, "w")) == NULL)
+  if (render_svg)
     {
-      g_print ("Can't open the output file. Stop.");
-      exit (1);
+      svg_out_path = g_newa (gchar, strlen (output_file) + 4);
+      sprintf (svg_out_path, "%s.svg", output_file);
+
+      if ((svg_out = fopen (svg_out_path, "w")) == NULL)
+        {
+          g_print ("Can't open the svg output file. Stop.");
+          exit (1);
+        }
+    }
+
+  if (render_mesh)
+    {
+      mesh_out_path = g_newa (gchar, strlen (output_file) + 4);
+      sprintf (mesh_out_path, "%s.ppm", output_file);
+
+      if ((mesh_out = fopen (mesh_out_path, "w")) == NULL)
+        {
+          g_print ("Can't open the mesh output file. Stop.");
+          exit (1);
+        }
     }
 
   read_points_file (input_file, &pts, &colors);
@@ -229,41 +249,33 @@ gint main (int argc, char *argv[])
   dt = p2tr_dt_new (G_PI / 6, p2tr_dt_false_too_big, rcdt);
   p2tr_dt_refine (dt, refine_max_steps);
 
-  p2tr_plot_svg (dt->mesh->mesh,out);
-
-  fclose (out);
-
-  buf = g_newa(char, strlen(output_file) + 5);
-  sprintf (buf, "%s.ppm", output_file);
-
-  if ((out = fopen (buf, "w")) == NULL)
+  if (render_svg)
     {
-      g_print ("Can't open the output ppm file. Stop.");
-      exit (1);
+      p2tr_plot_svg (dt->mesh->mesh, svg_out);
+      fclose (svg_out);
     }
 
-  imc.cpp = 4;
-  imc.min_x = imc.min_y = 0;
-  imc.step_x = imc.step_y = 0.2;
-  imc.x_samples = imc.y_samples = 500;
-
-  im = g_new (gfloat, imc.cpp * imc.x_samples * imc.y_samples);
-
-  p2tr_mesh_render_scanline (dt->mesh->mesh, im, &imc, test_point_to_color, NULL);
-
-  p2tr_write_ppm (out, im, &imc);
-  fclose (out);
-
-  g_free (im);
-
-#if FALSE
-  p2tr_triangulation_free (T);
-
-  for (i = 0; i < pts->len; i++)
+  if (render_mesh)
     {
-      p2tr_point_unref ((P2trPoint*) g_ptr_array_index (pts, i));
+      P2trImageConfig imc;
+      gfloat *im;
+
+      imc.cpp = 4;
+      imc.min_x = imc.min_y = 0;
+      imc.step_x = imc.step_y = 0.2;
+      imc.x_samples = imc.y_samples = 500;
+
+      im = g_new (gfloat, imc.cpp * imc.x_samples * imc.y_samples);
+
+      p2tr_mesh_render_scanline (dt->mesh->mesh, im, &imc, test_point_to_color, NULL);
+
+      p2tr_write_ppm (mesh_out, im, &imc);
+      fclose (mesh_out);
+
+      g_free (im);
     }
-#endif
+
+  p2tr_cdt_free (rcdt);
 
   g_ptr_array_free (pts, TRUE);
   g_array_free (colors, TRUE);
