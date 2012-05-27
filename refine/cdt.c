@@ -55,6 +55,8 @@ p2tr_cdt_new (P2tCDT *cdt)
   P2tTrianglePtrArray cdt_tris = p2t_cdt_get_triangles (cdt);
   GHashTable *point_map = g_hash_table_new (g_direct_hash, g_direct_equal);
   P2trCDT *rmesh = g_slice_new (P2trCDT);
+  GHashTableIter iter;
+  P2trPoint *pt_iter = NULL;
 
   gint i, j;
 
@@ -129,6 +131,10 @@ p2tr_cdt_new (P2tCDT *cdt)
     p2tr_triangle_unref (new_tri);
   }
 
+  /* Now finally unref the points we added into the map */
+  g_hash_table_iter_init (&iter, point_map);
+  while (g_hash_table_iter_next (&iter, NULL, (gpointer*)&pt_iter))
+    p2tr_point_unref (pt_iter);
   g_hash_table_destroy (point_map);
 
   return rmesh;

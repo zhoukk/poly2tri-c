@@ -23,7 +23,15 @@ P2trPoint*
 p2tr_mesh_new_point (P2trMesh          *self,
                      const P2trVector2 *c)
 {
-  P2trPoint *pt = p2tr_point_new (c);
+  return p2tr_mesh_new_point2 (self, c->x, c->y);
+}
+
+P2trPoint*
+p2tr_mesh_new_point2 (P2trMesh *self,
+                      gdouble   x,
+                      gdouble   y)
+{
+  P2trPoint *pt = p2tr_point_new2 (x, y);
 
   pt->mesh = self;
   p2tr_mesh_ref (self);
@@ -32,17 +40,6 @@ p2tr_mesh_new_point (P2trMesh          *self,
   p2tr_point_ref (pt);
 
   return pt;
-}
-
-P2trPoint*
-p2tr_mesh_new_point2 (P2trMesh *self,
-                      gdouble   x,
-                      gdouble   y)
-{
-  P2trVector2 c;
-  c.x = x;
-  c.y = y;
-  return p2tr_mesh_new_point (self, &c);
 }
 
 P2trEdge*
