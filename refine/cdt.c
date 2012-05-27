@@ -121,9 +121,9 @@ p2tr_cdt_new (P2tCDT *cdt)
     P2trPoint *pt3 = g_hash_table_lookup (point_map, p2t_triangle_get_point (cdt_tri, 2));
 
     P2trTriangle *new_tri = p2tr_mesh_new_triangle (rmesh->mesh,
-        p2tr_point_get_edge_to(pt1, pt2),
-        p2tr_point_get_edge_to(pt2, pt3),
-        p2tr_point_get_edge_to(pt3, pt1));
+        p2tr_point_get_edge_to(pt1, pt2, FALSE),
+        p2tr_point_get_edge_to(pt2, pt3, FALSE),
+        p2tr_point_get_edge_to(pt3, pt1, FALSE));
 
     /* We won't do any usage of the triangle, so just unref it */
     p2tr_triangle_unref (new_tri);
@@ -138,6 +138,7 @@ void
 p2tr_cdt_free (P2trCDT* self)
 {
   p2tr_pslg_free (self->outline);
+  p2tr_mesh_clear (self->mesh);
   p2tr_mesh_unref (self->mesh);
 
   g_slice_free (P2trCDT, self);
@@ -362,15 +363,16 @@ p2tr_cdt_triangulate_fan (P2trCDT   *self,
       if (A == NULL || B == NULL)
         continue;
 
-      AB = p2tr_point_get_edge_to (A, B);
+      AB = p2tr_point_get_edge_to (A, B, TRUE);
       BC = p2tr_mesh_new_or_existing_edge (self->mesh, B, center, FALSE);
       CA = p2tr_mesh_new_or_existing_edge (self->mesh, center, A, FALSE);
 
       tri = p2tr_mesh_new_triangle (self->mesh, AB, BC, CA);
       new_tris = g_list_prepend (new_tris, tri);
 
-      p2tr_edge_unref (BC);
       p2tr_edge_unref (CA);
+      p2tr_edge_unref (BC);
+      p2tr_edge_unref (AB);
     }
 
   return new_tris;
@@ -392,8 +394,8 @@ p2tr_cdt_split_edge (P2trCDT   *self,
    *      V
    */
   P2trPoint *X = P2TR_EDGE_START (e), *Y = e->end;
-  P2trPoint *V = (e->tri != NULL) ? p2tr_triangle_get_opposite_point(e->tri, e) : NULL;
-  P2trPoint *W = (e->mirror->tri != NULL) ? p2tr_triangle_get_opposite_point (e->mirror->tri, e->mirror) : NULL;
+  P2trPoint *V = (e->tri != NULL) ? p2tr_triangle_get_opposite_point(e->tri, e, FALSE) : NULL;
+  P2trPoint *W = (e->mirror->tri != NULL) ? p2tr_triangle_get_opposite_point (e->mirror->tri, e->mirror, FALSE) : NULL;
   gboolean   constrained = e->constrained;
   P2trEdge  *XC, *CY;
   GList     *new_tris = NULL, *fan = NULL, *new_edges = NULL;
@@ -502,7 +504,7 @@ p2tr_cdt_flip_fix (P2trCDT *self,
           if (e->constrained || e->delaunay)
               continue;
 
-          opposite = p2tr_triangle_get_opposite_point (e->mirror->tri, e->mirror);
+          opposite = p2tr_triangle_get_opposite_point (e->mirror->tri, e->mirror, FALSE);
           if (! p2tr_circle_test_point_outside(&circum_circle, &opposite->c))
             {
               P2trEdge *flipped = NULL;
@@ -561,18 +563,17 @@ p2tr_cdt_try_flip (P2trCDT   *self,
 
   A = P2TR_EDGE_START (to_flip);
   B = to_flip->end;
-  C = p2tr_triangle_get_opposite_point (to_flip->tri, to_flip);
-  D = p2tr_triangle_get_opposite_point (to_flip->mirror->tri, to_flip->mirror);
+  C = p2tr_triangle_get_opposite_point (to_flip->tri, to_flip, FALSE);
+  D = p2tr_triangle_get_opposite_point (to_flip->mirror->tri, to_flip->mirror, FALSE);
 
   ABC = to_flip->tri;
   ADB = to_flip->mirror->tri;
 
   /* Check if the quadriliteral ADBC is concave (because if it is, we
    * can't flip the edge) */
-  if (p2tr_triangle_get_angle_at(ABC, A) + p2tr_triangle_get_angle_at(ADB, A) >= G_PI)
-      return FALSE;
-  if (p2tr_triangle_get_angle_at(ABC, B) + p2tr_triangle_get_angle_at(ADB, B) >= G_PI)
-      return FALSE;
+  if (p2tr_triangle_get_angle_at(ABC, A) + p2tr_triangle_get_angle_at(ADB, A) >= G_PI ||
+      p2tr_triangle_get_angle_at(ABC, B) + p2tr_triangle_get_angle_at(ADB, B) >= G_PI)
+    return FALSE;
 
   p2tr_edge_remove (to_flip);
 
@@ -580,13 +581,13 @@ p2tr_cdt_try_flip (P2trCDT   *self,
   DC->delaunay = DC->mirror->delaunay = TRUE;
 
   g_queue_push_tail (new_tris, p2tr_mesh_new_triangle (self->mesh,
-      p2tr_point_get_edge_to (C, A),
-      p2tr_point_get_edge_to (A, D),
+      p2tr_point_get_edge_to (C, A, FALSE),
+      p2tr_point_get_edge_to (A, D, FALSE),
       DC));
 
   g_queue_push_tail (new_tris, p2tr_mesh_new_triangle (self->mesh,
-      p2tr_point_get_edge_to (D, B),
-      p2tr_point_get_edge_to (B, C),
+      p2tr_point_get_edge_to (D, B, FALSE),
+      p2tr_point_get_edge_to (B, C, FALSE),
       DC->mirror));
 
   *new_edge = DC;

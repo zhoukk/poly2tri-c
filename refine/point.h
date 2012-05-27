@@ -43,7 +43,8 @@ P2trEdge*   p2tr_point_has_edge_to          (P2trPoint *start,
                                              P2trPoint *end);
 
 P2trEdge*   p2tr_point_get_edge_to          (P2trPoint *start,
-                                             P2trPoint *end);
+                                             P2trPoint *end,
+                                             gboolean   do_ref);
 
 void        _p2tr_point_insert_edge         (P2trPoint *self,
                                              P2trEdge  *e);

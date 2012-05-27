@@ -78,8 +78,8 @@ p2tr_cdt_is_encroached (P2trEdge *E)
   if (! E->constrained)
       return FALSE;
   
-  return (T1 != NULL && p2tr_cdt_test_encroachment_ignore_visibility (&p2tr_triangle_get_opposite_point (T1, E)->c, E))
-      || (T2 != NULL && p2tr_cdt_test_encroachment_ignore_visibility (&p2tr_triangle_get_opposite_point (T2, E)->c, E));
+  return (T1 != NULL && p2tr_cdt_test_encroachment_ignore_visibility (&p2tr_triangle_get_opposite_point (T1, E, FALSE)->c, E))
+      || (T2 != NULL && p2tr_cdt_test_encroachment_ignore_visibility (&p2tr_triangle_get_opposite_point (T2, E, FALSE)->c, E));
 }
 
 /* ****************************************************************** */

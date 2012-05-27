@@ -54,6 +54,7 @@ p2tr_edge_ref (P2trEdge *self)
 void
 p2tr_edge_unref (P2trEdge *self)
 {
+  g_assert (self->refcount > 0);
   if (--self->refcount == 0 && self->mirror->refcount == 0)
     p2tr_edge_free (self);
 }
@@ -61,7 +62,7 @@ p2tr_edge_unref (P2trEdge *self)
 gboolean
 p2tr_edge_is_removed (P2trEdge *self)
 {
-  return self->end == NULL;
+  return self->end == NULL; /* This is only true if the edge was removed */
 }
 
 void
@@ -70,7 +71,7 @@ p2tr_edge_remove (P2trEdge *self)
   P2trMesh *mesh;
   P2trPoint *start, *end;
 
-  if (self->end == NULL) /* This is only true if the edge was removed */
+  if (p2tr_edge_is_removed (self))
     return;
 
   mesh = p2tr_edge_get_mesh (self);
@@ -104,8 +105,8 @@ void
 p2tr_edge_free (P2trEdge *self)
 {
   p2tr_edge_remove (self);
-  g_slice_free (P2trEdge, self);
   g_slice_free (P2trEdge, self->mirror);
+  g_slice_free (P2trEdge, self);
 }
 
 void

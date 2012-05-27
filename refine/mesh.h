@@ -13,8 +13,6 @@ struct P2trMesh_
   P2trHashSet *points;
   
   guint        refcount;
-  
-  gboolean     _is_clearing_now;
 };
 
 P2trMesh*     p2tr_mesh_new             (void);

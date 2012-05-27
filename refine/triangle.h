@@ -33,7 +33,8 @@ P2trMesh*   p2tr_triangle_get_mesh           (P2trTriangle *self);
 gboolean    p2tr_triangle_is_removed         (P2trTriangle *self);
 
 P2trPoint*  p2tr_triangle_get_opposite_point (P2trTriangle *self,
-                                              P2trEdge     *e);
+                                              P2trEdge     *e,
+                                              gboolean      do_ref);
 
 P2trEdge*   p2tr_triangle_get_opposite_edge  (P2trTriangle *self,
                                               P2trPoint    *p);

@@ -42,6 +42,8 @@ p2tr_triangle_new (P2trEdge *AB,
   gint i;
   P2trTriangle *self = g_slice_new (P2trTriangle);
 
+  self->refcount = 0;
+
 #ifndef P2TC_NO_LOGIC_CHECKS
   p2tr_validate_edges_can_form_tri (AB, BC, CA);
 #endif
@@ -84,12 +86,10 @@ p2tr_triangle_new (P2trEdge *AB,
 #endif
       self->edges[i]->tri = self;
       p2tr_edge_ref (self->edges[i]);
+      p2tr_triangle_ref (self);
     }
 
-  /* Reference by 3 edges, and another for the return of this pointer */
-  self->refcount = 4;
-
-  return self;
+  return p2tr_triangle_ref (self);
 }
 
 P2trTriangle*
@@ -102,6 +102,7 @@ p2tr_triangle_ref (P2trTriangle *self)
 void
 p2tr_triangle_unref (P2trTriangle *self)
 {
+  g_assert (self->refcount > 0);
   if (--self->refcount == 0)
     p2tr_triangle_free (self);
 }
@@ -157,16 +158,20 @@ p2tr_triangle_is_removed (P2trTriangle *self)
 
 P2trPoint*
 p2tr_triangle_get_opposite_point (P2trTriangle *self,
-                                  P2trEdge     *e)
+                                  P2trEdge     *e,
+                                  gboolean      do_ref)
 {
+  P2trPoint *pt;
   if (self->edges[0] == e || self->edges[0]->mirror == e)
-    return p2tr_point_ref (self->edges[1]->end);
-  if (self->edges[1] == e || self->edges[1]->mirror == e)
-    return p2tr_point_ref (self->edges[2]->end);
-  if (self->edges[2] == e || self->edges[2]->mirror == e)
-    return p2tr_point_ref (self->edges[0]->end);
+    pt = self->edges[1]->end;
+  else if (self->edges[1] == e || self->edges[1]->mirror == e)
+    pt = self->edges[2]->end;
+  else if (self->edges[2] == e || self->edges[2]->mirror == e)
+    pt = self->edges[0]->end;
+  else
+    p2tr_exception_programmatic ("The edge is not in the triangle!");
 
-  p2tr_exception_programmatic ("The edge is not in the triangle!");
+  return do_ref ? p2tr_point_ref (pt) : pt;
 }
 
 P2trEdge*

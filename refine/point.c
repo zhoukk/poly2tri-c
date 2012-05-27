@@ -33,11 +33,7 @@ p2tr_point_remove (P2trPoint *self)
     p2tr_edge_remove ((P2trEdge*) self->outgoing_edges->data);
 
   if (self->mesh != NULL)
-  {
     p2tr_mesh_on_point_removed (self->mesh, self);
-    p2tr_mesh_unref (self->mesh);
-    self->mesh = NULL;
-  }
 }
 
 void
@@ -65,13 +61,14 @@ p2tr_point_has_edge_to (P2trPoint *start,
 
 P2trEdge*
 p2tr_point_get_edge_to (P2trPoint *start,
-                        P2trPoint *end)
+                        P2trPoint *end,
+                        gboolean   do_ref)
 {
     P2trEdge* result = p2tr_point_has_edge_to (start, end);
     if (result == NULL)
       p2tr_exception_programmatic ("Tried to get an edge that doesn't exist!");
     else
-      return p2tr_edge_ref (result);
+      return do_ref ? p2tr_edge_ref (result) : result;
 }
 
 void
@@ -183,6 +180,7 @@ p2tr_point_ref (P2trPoint *self)
 void
 p2tr_point_unref (P2trPoint *self)
 {
+  g_assert (self->refcount > 0);
   if (--self->refcount == 0)
     p2tr_point_free (self);
 }

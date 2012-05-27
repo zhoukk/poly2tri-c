@@ -16,8 +16,6 @@ p2tr_mesh_new (void)
   mesh->points = p2tr_hash_set_new_default ();
   mesh->triangles = p2tr_hash_set_new_default ();
 
-  mesh->_is_clearing_now = FALSE;
-
   return mesh;
 }
 
@@ -100,8 +98,7 @@ p2tr_mesh_on_point_removed (P2trMesh  *self,
   point->mesh = NULL;
   p2tr_mesh_unref (self);
 
-  if (! self->_is_clearing_now)
-    p2tr_hash_set_remove (self->points, point);
+  p2tr_hash_set_remove (self->points, point);
   p2tr_point_unref (point);
 }
 
@@ -109,8 +106,7 @@ void
 p2tr_mesh_on_edge_removed (P2trMesh *self,
                            P2trEdge *edge)
 {
-  if (! self->_is_clearing_now)
-    p2tr_hash_set_remove (self->edges, edge);
+  p2tr_hash_set_remove (self->edges, edge);
   p2tr_edge_unref (edge);
 }
 
@@ -118,8 +114,7 @@ void
 p2tr_mesh_on_triangle_removed (P2trMesh     *self,
                                P2trTriangle *triangle)
 {
-  if (! self->_is_clearing_now)
-    p2tr_hash_set_remove (self->triangles, triangle);
+  p2tr_hash_set_remove (self->triangles, triangle);
   p2tr_triangle_unref (triangle);
 }
 
@@ -129,24 +124,32 @@ p2tr_mesh_clear (P2trMesh *self)
   P2trHashSetIter iter;
   gpointer temp;
 
-  self->_is_clearing_now = TRUE;
-
+  /* While iterating over the sets of points/edges/triangles to remove
+   * all the mesh elements, the sets will be modified by the removal
+   * operation itself. Therefore we can't use a regular iterator -
+   * instead we must look always at the first place */
   p2tr_hash_set_iter_init (&iter, self->triangles);
   while (p2tr_hash_set_iter_next (&iter, &temp))
-    p2tr_triangle_remove ((P2trTriangle*)temp);
-  p2tr_hash_set_remove_all (self->triangles);
+    {
+      p2tr_triangle_remove ((P2trTriangle*)temp);
+      p2tr_hash_set_iter_init (&iter, self->triangles);
+    }
 
   p2tr_hash_set_iter_init (&iter, self->edges);
   while (p2tr_hash_set_iter_next (&iter, &temp))
-    p2tr_edge_remove ((P2trEdge*)temp);
-  p2tr_hash_set_remove_all (self->edges);
+    {
+      g_assert (((P2trEdge*)temp)->tri == NULL);
+      p2tr_edge_remove ((P2trEdge*)temp);
+      p2tr_hash_set_iter_init (&iter, self->edges);
+    }
 
   p2tr_hash_set_iter_init (&iter, self->points);
   while (p2tr_hash_set_iter_next (&iter, &temp))
-    p2tr_point_remove ((P2trPoint*)temp);
-  p2tr_hash_set_remove_all (self->points);
-
-  self->_is_clearing_now = FALSE;
+    {
+      g_assert (((P2trPoint*)temp)->outgoing_edges == NULL);
+      p2tr_point_remove ((P2trPoint*)temp);
+      p2tr_hash_set_iter_init (&iter, self->points);
+    }
 }
 
 void
@@ -164,6 +167,7 @@ p2tr_mesh_free (P2trMesh *self)
 void
 p2tr_mesh_unref (P2trMesh *self)
 {
+  g_assert (self->refcount > 0);
   if (--self->refcount == 0)
     p2tr_mesh_free (self);
 }
