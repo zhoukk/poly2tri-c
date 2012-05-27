@@ -277,6 +277,7 @@ gint main (int argc, char *argv[])
       g_free (im);
     }
 
+  p2tr_dt_free (dt);
   p2tr_cdt_free (rcdt);
 
   g_ptr_array_free (pts, TRUE);

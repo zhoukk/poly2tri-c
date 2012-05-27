@@ -32,6 +32,8 @@ gboolean     p2tr_dt_false_too_big (P2trTriangle *tri);
 P2trDelaunayTerminator*
 p2tr_dt_new (gdouble theta, P2trTriangleTooBig delta, P2trCDT *cdt);
 
+void p2tr_dt_free (P2trDelaunayTerminator *self);
+
 void p2tr_dt_refine (P2trDelaunayTerminator *self,
                      gint                    max_steps);
 

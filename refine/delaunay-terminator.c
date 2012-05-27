@@ -146,6 +146,13 @@ p2tr_dt_new (gdouble theta, P2trTriangleTooBig delta, P2trCDT *cdt)
   return self;
 }
 
+void
+p2tr_dt_free (P2trDelaunayTerminator *self)
+{
+  g_queue_clear (&self->Qs);
+  g_sequence_free (self->Qt);
+  g_slice_free (P2trDelaunayTerminator, self);
+}
 static void
 p2tr_dt_enqueue_tri (P2trDelaunayTerminator *self,
                      P2trTriangle           *tri)
