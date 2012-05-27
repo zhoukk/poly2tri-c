@@ -223,7 +223,7 @@ p2tr_dt_refine (P2trDelaunayTerminator *self,
   P2trEdge *s;
   P2trTriangle *t;
   gint steps = 0;
-  
+
   p2tr_cdt_validate_cdt(self->mesh);
 
   if (steps++ >= max_steps)
@@ -242,26 +242,26 @@ p2tr_dt_refine (P2trDelaunayTerminator *self,
     if (p2tr_triangle_smallest_non_constrained_angle (t) < self->theta)
       p2tr_dt_enqueue_tri (self, t);
 
-  while (! p2tr_dt_tri_queue_is_empty (self) && steps++ < max_steps)
+  while (! p2tr_dt_tri_queue_is_empty (self))
     {
       t = p2tr_dt_dequeue_tri (self);
 
-      if (p2tr_hash_set_contains (self->mesh->mesh->triangles, t))
+      if (steps++ < max_steps && p2tr_hash_set_contains (self->mesh->mesh->triangles, t))
         {
           P2trCircle tCircum;
           P2trVector2 *c;
-          P2trTriangle *triContaining_c_NOREF;
+          P2trTriangle *triContaining_c;
           P2trHashSet *E;
 
           p2tr_cdt_validate_cdt (self->mesh);
           p2tr_triangle_get_circum_circle (t, &tCircum);
           c = &tCircum.center;
 
-          triContaining_c_NOREF = p2tr_mesh_find_point_local (self->mesh->mesh, c, t);
+          triContaining_c = p2tr_mesh_find_point_local (self->mesh->mesh, c, t);
 
           /* If no edge is encroached, then this must be
            * inside the triangulation domain!!! */
-          if (triContaining_c_NOREF == NULL)
+          if (triContaining_c == NULL)
             p2tr_exception_geometric ("Should not happen!");
 
           /* Now, check if this point would encroach any edge
@@ -271,7 +271,7 @@ p2tr_dt_refine (P2trDelaunayTerminator *self,
           if (p2tr_hash_set_size (E) == 0)
             {
               P2trPoint *cPoint;
-              cPoint = p2tr_cdt_insert_point (self->mesh, c, triContaining_c_NOREF);
+              cPoint = p2tr_cdt_insert_point (self->mesh, c, triContaining_c);
               NewVertex (self, cPoint, self->theta, self->delta);
               
               p2tr_point_unref (cPoint);
@@ -292,6 +292,7 @@ p2tr_dt_refine (P2trDelaunayTerminator *self,
                 }
             }
           p2tr_hash_set_free (E);
+          p2tr_triangle_unref (triContaining_c);
       }
 
       p2tr_triangle_unref (t);
@@ -395,6 +396,8 @@ NewVertex (P2trDelaunayTerminator *self, P2trPoint *v, gdouble theta, P2trTriang
         p2tr_dt_enqueue_segment (self, e);
       else if (delta (t) || p2tr_triangle_smallest_non_constrained_angle (t) < theta)
         p2tr_dt_enqueue_tri (self, t);
+
+      p2tr_edge_unref (e);
     }
 }
 

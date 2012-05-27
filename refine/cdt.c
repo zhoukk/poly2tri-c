@@ -279,7 +279,9 @@ p2tr_cdt_insert_point (P2trCDT           *self,
       if (p2tr_math_orient2d (& P2TR_EDGE_START(edge)->c,
               &edge->end->c, pc) == P2TR_ORIENTATION_LINEAR)
         {
-          p2tr_cdt_split_edge (self, edge, pt);
+          GList *parts = p2tr_cdt_split_edge (self, edge, pt), *eIter;
+          for (eIter = parts; eIter != NULL; eIter = eIter->next)
+            p2tr_edge_unref ((P2trEdge*)eIter->data);
           inserted = TRUE;
           break;
         }
@@ -290,6 +292,9 @@ p2tr_cdt_insert_point (P2trCDT           *self,
     p2tr_cdt_insert_point_into_triangle (self, pt, tri);
 
   p2tr_cdt_on_new_point (self, pt);
+
+  /* We no longer need the triangle */
+  p2tr_triangle_unref (tri);
 
   p2tr_cdt_validate_unused (self);
   return pt;
