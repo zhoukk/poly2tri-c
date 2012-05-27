@@ -94,6 +94,7 @@ p2t_sweepcontext_destroy (P2tSweepContext* THIS)
   p2t_node_free (THIS->af_middle_);
   p2t_node_free (THIS->af_tail_);
 
+  g_ptr_array_free (THIS->points_, TRUE);
   g_ptr_array_free (THIS->triangles_, TRUE);
 
   for (iter = g_list_first (THIS->map_); iter != NULL; iter = g_list_next (iter))
