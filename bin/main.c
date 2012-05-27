@@ -196,6 +196,8 @@ gint main (int argc, char *argv[])
       exit (1);
     }
 
+  g_option_context_free (context);
+
   if (input_file == NULL)
     {
       g_print ("No input file given. Stop.");
