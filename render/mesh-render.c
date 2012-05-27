@@ -74,6 +74,7 @@ p2tr_mesh_render_cache_uvt_exact (P2trMesh        *T,
   pt.y = config->min_y;
 
   uvt3_t(uvt) = p2tr_mesh_find_point_local2 (T, &pt, NULL, &uvt3_u(uvt), &uvt3_v(uvt));
+  if (uvt3_t(uvt)) p2tr_triangle_unref (uvt3_t(uvt));
   tr_prev = uvt3_t(uvt);
   
   for (y = 0, pt.y = config->min_y; y < config->y_samples; y++, pt.y += config->step_y)
@@ -81,6 +82,7 @@ p2tr_mesh_render_cache_uvt_exact (P2trMesh        *T,
       {
         if (n-- == 0) return;
         uvt3_t(uvt) = p2tr_mesh_find_point_local2 (T, &pt, tr_prev, &uvt3_u(uvt), &uvt3_v(uvt));
+        if (uvt3_t(uvt)) p2tr_triangle_unref (uvt3_t(uvt));
         tr_prev = uvt3_t(uvt);
         uvt += 3;
       }
@@ -128,9 +130,9 @@ p2tr_mesh_render_scanline2 (P2truvt              *uvt_cache,
 
   P2trPoint *A = NULL, *B = NULL, *C = NULL;
 
-  gfloat *colA = g_new (gfloat, config->cpp);
-  gfloat *colB = g_new (gfloat, config->cpp);
-  gfloat *colC = g_new (gfloat, config->cpp);
+  gfloat *colA = g_newa (gfloat, config->cpp);
+  gfloat *colB = g_newa (gfloat, config->cpp);
+  gfloat *colC = g_newa (gfloat, config->cpp);
 
   gfloat *pixel = dest;
 
