@@ -1,4 +1,8 @@
 /*
+ * This file is a part of the C port of the Poly2Tri library
+ * Porting to C done by (c) Barak Itkin <lightningismyname@gmail.com>
+ * http://code.google.com/p/poly2tri-c/
+ *
  * Poly2Tri Copyright (c) 2009-2010, Poly2Tri Contributors
  * http://code.google.com/p/poly2tri/
  *
@@ -28,6 +32,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /**
  * Sweep-line, Constrained Delauney Triangulation (CDT) See: Domiter, V. and
  * Zalik, B.(2008)'Sweep-line algorithm for constrained Delaunay triangulation',
@@ -36,8 +41,8 @@
  * "FlipScan" Constrained Edge Algorithm invented by Thomas �hl�n, thahlen@gmail.com
  */
 
-#ifndef SWEEP_H
-#define SWEEP_H
+#ifndef __P2TC_P2T_SWEEP_H__
+#define __P2TC_P2T_SWEEP_H__
 
 #include "../common/poly2tri-private.h"
 #include "../common/shapes.h"

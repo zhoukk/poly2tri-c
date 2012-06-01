@@ -1,5 +1,5 @@
-/* 
- * This file is a part of Poly2Tri-C - The C port of the Poly2Tri library
+/*
+ * This file is a part of the C port of the Poly2Tri library
  * Porting to C done by (c) Barak Itkin <lightningismyname@gmail.com>
  * http://code.google.com/p/poly2tri-c/
  *
@@ -32,6 +32,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #include "shapes.h"
 #include <stdio.h>
 #include <stdlib.h>

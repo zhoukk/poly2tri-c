@@ -1,10 +1,7 @@
 /*
- * This file is a part of Poly2Tri-C - The C port of the Poly2Tri library
- * Porting to C done by (c) Barak Itkin <lightningismyname@gmail.com>
+ * This file is a part of Poly2Tri-C
+ * (c) Barak Itkin <lightningismyname@gmail.com>
  * http://code.google.com/p/poly2tri-c/
- *
- * Poly2Tri Copyright (c) 2009-2010, Poly2Tri Contributors
- * http://code.google.com/p/poly2tri/
  *
  * All rights reserved.
  *

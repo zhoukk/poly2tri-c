@@ -1,6 +1,7 @@
 /*
- * Poly2Tri Copyright (c) 2009-2011, Poly2Tri Contributors
- * http://code.google.com/p/poly2tri/
+ * This file is a part of Poly2Tri-C
+ * (c) Barak Itkin <lightningismyname@gmail.com>
+ * http://code.google.com/p/poly2tri-c/
  *
  * All rights reserved.
  *

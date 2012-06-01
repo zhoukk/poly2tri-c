@@ -1,5 +1,5 @@
 /*
- * This file is a part of Poly2Tri-C - The C port of the Poly2Tri library
+ * This file is a part of the C port of the Poly2Tri library
  * Porting to C done by (c) Barak Itkin <lightningismyname@gmail.com>
  * http://code.google.com/p/poly2tri-c/
  *
@@ -33,8 +33,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __SHAPES_H__
-#define __SHAPES_H__
+#ifndef __P2TC_P2T_SHAPES_H__
+#define __P2TC_P2T_SHAPES_H__
 
 #include <stddef.h>
 #include <assert.h>
