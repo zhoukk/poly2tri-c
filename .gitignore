@@ -3,6 +3,7 @@ doxygen-doc
 *.lo
 *.a
 *.o
+*.pc
 /*.config
 *Makefile
 *Makefile.in

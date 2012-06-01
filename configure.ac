@@ -1,5 +1,56 @@
+# Bump on major changes to the library which should not even be
+# compatiable with earlier versions
+m4_define([p2tc_major_version], [0])
+
+# Bump on new features and interface changes (feature releases)
+m4_define([p2tc_minor_version], [0])
+
+# Bump on revisions that do not break the interface (bug-fix releases)
+m4_define([p2tc_micro_version], [0])
+
+# A version string containing all three version numbers
+m4_define([p2tc_real_version],
+          [p2tc_major_version.p2tc_minor_version.p2tc_micro_version])
+m4_define([p2tc_version], [p2tc_real_version])
+
+# The version number used when linking with -llibpoly2tri-c-X.Y
+m4_define([p2tc_api_version], [p2tc_major_version.p2tc_minor_version])
+
+# The version number of the currently implemented interface (bump on
+# every interface change)
+m4_define([lt_current], [0])
+
+# The revision number of the current interface (reset to 0 on every
+# interface change)
+m4_define([lt_revision], [0])
+
+# Number of interfaces implemented minus one. The library should
+# support all interfaces between current minus age and current.
+# Increment by 1 on every new feature addition
+# Reset to 0 if backwards compatiability is broken
+m4_define([lt_age], [0])
+
 # Declare the package details
-AC_INIT([poly2tri-c], [0.9], [lightningismyname@gmail.com])
+AC_INIT([poly2tri-c], p2tc_real_version, [lightningismyname@gmail.com])
+
+P2TC_MAJOR_VERSION=p2tc_major_version
+P2TC_MINOR_VERSION=p2tc_minor_version
+P2TC_MICRO_VERSION=p2tc_micro_version
+P2TC_VERSION=p2tc_version
+P2TC_REAL_VERSION=p2tc_real_version
+P2TC_API_VERSION=p2tc_api_version
+AC_SUBST(P2TC_MAJOR_VERSION)
+AC_SUBST(P2TC_MINOR_VERSION)
+AC_SUBST(P2TC_MICRO_VERSION)
+AC_SUBST(P2TC_VERSION)
+AC_SUBST(P2TC_REAL_VERSION)
+AC_SUBST(P2TC_API_VERSION)
+
+P2TC_RELEASE=p2tc_api_version
+AC_SUBST(P2TC_RELEASE)
+
+P2TC_LIBRARY_VERSION="lt_current:lt_revision:lt_age"
+AC_SUBST(P2TC_LIBRARY_VERSION)
 
 # Output the auxilary build scripts to a subdirectory
 AC_CONFIG_AUX_DIR([build-aux])
@@ -53,6 +104,7 @@ AC_CONFIG_HEADERS([config.h])
 
 # Output these files
 AC_CONFIG_FILES([
+	poly2tri-c.pc           \
 	bin/Makefile		\
 	p2t/sweep/Makefile	\
 	p2t/common/Makefile	\
