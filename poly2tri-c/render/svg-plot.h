@@ -33,7 +33,7 @@
 #ifndef __P2TC_RENDER_SVG_PLOT_H__
 #define __P2TC_RENDER_SVG_PLOT_H__
 
-#include <refine/refine.h>
+#include <poly2tri-c/refine/refine.h>
 
 #define PLOT_LINE_WIDTH 0.40
 #define ARROW_SIDE_ANGLE (G_PI / 180 * 30)

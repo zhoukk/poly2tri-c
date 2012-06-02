@@ -33,7 +33,7 @@
 #ifndef __P2TC_REFINE_CDT_H__
 #define __P2TC_REFINE_CDT_H__
 
-#include <p2t/poly2tri.h>
+#include <poly2tri-c/p2t/poly2tri.h>
 #include "mesh.h"
 #include "pslg.h"
 

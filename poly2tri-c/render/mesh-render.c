@@ -33,7 +33,7 @@
 #include <glib.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <refine/refine.h>
+#include <poly2tri-c/refine/refine.h>
 #include "mesh-render.h"
 
 /* Most computations using the Barycentric Coordinates are Based on

@@ -34,11 +34,11 @@
 #include <stdio.h>
 #include <glib.h>
 
-#include <p2t/poly2tri.h>
+#include <poly2tri-c/p2t/poly2tri.h>
 
-#include <refine/refine.h>
-#include <render/svg-plot.h>
-#include <render/mesh-render.h>
+#include <poly2tri-c/refine/refine.h>
+#include <poly2tri-c/render/svg-plot.h>
+#include <poly2tri-c/render/mesh-render.h>
 
 #include <string.h>
 

@@ -35,7 +35,7 @@
 #include <math.h>
 #include <glib.h>
 
-#include <refine/triangulation.h>
+#include <poly2tri-c/refine/triangulation.h>
 
 #include "svg-plot.h"
 

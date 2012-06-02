@@ -104,14 +104,15 @@ AC_CONFIG_HEADERS([config.h])
 
 # Output these files
 AC_CONFIG_FILES([
-	poly2tri-c.pc           \
-	bin/Makefile		\
-	p2t/sweep/Makefile	\
-	p2t/common/Makefile	\
-	p2t/Makefile		\
-	render/Makefile		\
-	refine/Makefile		\
-	Makefile		\
+	poly2tri-c.pc			\
+	bin/Makefile			\
+	poly2tri-c/Makefile		\
+	poly2tri-c/p2t/sweep/Makefile	\
+	poly2tri-c/p2t/common/Makefile	\
+	poly2tri-c/p2t/Makefile		\
+	poly2tri-c/render/Makefile	\
+	poly2tri-c/refine/Makefile	\
+	Makefile			\
 	])
 
 # Now really output
