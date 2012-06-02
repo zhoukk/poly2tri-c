@@ -7,7 +7,7 @@ AM_LDFLAGS = -version-info $(P2TC_LIBRARY_VERSION)
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = poly2tri-c.pc
 
-P2TC_publicdir = $(includedir)/poly2tri-c-$(P2TC_API_VERSION)
+P2TC_publicdir = $(includedir)/poly2tri-c-$(P2TC_API_VERSION)/poly2tri-c
 export P2TC_publicdir
 P2TC_public_HEADERS =
 
