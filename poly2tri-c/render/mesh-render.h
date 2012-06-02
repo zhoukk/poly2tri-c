@@ -33,6 +33,7 @@
 #ifndef __P2TR_RENDER_MESH_RENDER_H__
 #define __P2TR_RENDER_MESH_RENDER_H__
 
+#include <stdio.h>
 #include <glib.h>
 
 typedef struct {
