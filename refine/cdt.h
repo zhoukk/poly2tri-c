@@ -51,9 +51,11 @@ void        p2tr_cdt_validate_unused (P2trCDT* self);
  * @param cdt A P2tCDT Constrained Delaunay Triangulation
  * @return A P2trCDT Constrained Delaunay Triangulation
  */
-P2trCDT*    p2tr_cdt_new  (P2tCDT *cdt);
+P2trCDT*    p2tr_cdt_new       (P2tCDT *cdt);
 
-void        p2tr_cdt_free (P2trCDT *cdt);
+void        p2tr_cdt_free      (P2trCDT *cdt);
+
+void        p2tr_cdt_free_full (P2trCDT *cdt, gboolean clear_mesh);
 
 /**
  * Test whether there is a path from the point @ref p to the edge @e

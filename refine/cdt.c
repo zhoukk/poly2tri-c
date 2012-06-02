@@ -173,10 +173,17 @@ p2tr_cdt_new (P2tCDT *cdt)
 }
 
 void
-p2tr_cdt_free (P2trCDT* self)
+p2tr_cdt_free (P2trCDT *self)
+{
+  p2tr_cdt_free_full (self, TRUE);
+}
+
+void
+p2tr_cdt_free_full (P2trCDT* self, gboolean clear_mesh)
 {
   p2tr_pslg_free (self->outline);
-  p2tr_mesh_clear (self->mesh);
+  if (clear_mesh)
+    p2tr_mesh_clear (self->mesh);
   p2tr_mesh_unref (self->mesh);
 
   g_slice_free (P2trCDT, self);
