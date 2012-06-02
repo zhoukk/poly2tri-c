@@ -2,7 +2,7 @@ SUBDIRS = p2t refine render
 
 AM_LDFLAGS = -version-info $(P2TC_LIBRARY_VERSION)
 
-P2TC_publicdir = $(includedir)/poly2tri-c-$(P2TC_API_VERSION)
+P2TC_publicdir = $(includedir)/poly2tri-c-$(P2TC_API_VERSION)/poly2tri-c
 export P2TC_publicdir
 P2TC_public_HEADERS =
 
