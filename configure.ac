@@ -69,6 +69,10 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 # Define maintainer mode
 AM_MAINTAINER_MODE
 
+# On automake 1.12 we will need to call AM_PROG_AR
+# However, on some old versions it does not exist, so use and ifdef
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
+
 # Initialize libtool
 LT_INIT
 
