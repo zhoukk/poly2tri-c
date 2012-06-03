@@ -101,7 +101,7 @@ p2t_utils_in_scan_area (P2tPoint* pa, P2tPoint* pb, P2tPoint* pc, P2tPoint* pd)
   return TRUE;
 #else
   gdouble oadc, oadb = (pa->x - pb->x)*(pd->y - pb->y) - (pd->x - pb->x)*(pa->y - pb->y);
-  if (oadb >= EPSILON) {
+  if (oadb >= -EPSILON) {
     return FALSE;
   }
 
