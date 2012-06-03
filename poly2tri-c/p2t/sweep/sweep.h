@@ -172,6 +172,13 @@ void p2t_sweep_rotate_triangle_pair (P2tSweep *THIS, P2tTriangle *t, P2tPoint* p
  */
 void p2t_sweep_fill_advancingfront (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* n);
 
+/* Decision-making about when to Fill hole.
+ * Contributed by ToolmakerSteve2 */
+gboolean p2t_sweep_large_hole_dont_fill (P2tSweep* THIS, P2tNode* node);
+gboolean p2t_sweep_angle_exceeds_90_degrees (P2tSweep* THIS, P2tPoint* origin, P2tPoint* pa, P2tPoint* pb);
+gboolean p2t_sweep_angle_exceeds_plus_90_degrees_or_is_negative (P2tSweep* THIS, P2tPoint* origin, P2tPoint* pa, P2tPoint* pb);
+gdouble  p2t_sweep_angle (P2tSweep* THIS, P2tPoint* origin, P2tPoint* pa, P2tPoint* pb);
+
 /**
  *
  * @param node - middle node

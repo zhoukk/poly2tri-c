@@ -310,8 +310,8 @@ p2t_sweep_fill_advancingfront (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* n)
 
   while (node->next)
     {
-      double angle = p2t_sweep_hole_angle (THIS, node);
-      if (angle > G_PI_2 || angle < -G_PI_2) break;
+      /* if HoleAngle exceeds 90 degrees then break. */
+      if (p2t_sweep_large_hole_dont_fill (THIS, node)) break;
       p2t_sweep_fill (THIS, tcx, node);
       node = node->next;
     }
@@ -321,8 +321,8 @@ p2t_sweep_fill_advancingfront (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* n)
 
   while (node->prev)
     {
-      double angle = p2t_sweep_hole_angle (THIS, node);
-      if (angle > G_PI_2 || angle < -G_PI_2) break;
+      /* if HoleAngle exceeds 90 degrees then break. */
+      if (p2t_sweep_large_hole_dont_fill (THIS, node)) break;
       p2t_sweep_fill (THIS, tcx, node);
       node = node->prev;
     }
@@ -336,6 +336,68 @@ p2t_sweep_fill_advancingfront (P2tSweep *THIS, P2tSweepContext *tcx, P2tNode* n)
           p2t_sweep_fill_basin (THIS, tcx, n);
         }
     }
+}
+
+/* True if HoleAngle exceeds 90 degrees. */
+gboolean
+p2t_sweep_large_hole_dont_fill (P2tSweep *THIS, P2tNode* node)
+{
+  P2tNode* nextNode = node->next;
+  P2tNode* prevNode = node->prev;
+  P2tNode *next2Node, *prev2Node;
+  if (! p2t_sweep_angle_exceeds_90_degrees (THIS, node->point, nextNode->point, prevNode->point))
+    return FALSE;
+
+  /* Check additional points on front. */
+  next2Node = nextNode->next;
+  /* "..Plus.." because only want angles on same side as point being added. */
+  if ((next2Node != NULL) && !p2t_sweep_angle_exceeds_plus_90_degrees_or_is_negative (THIS, node->point, next2Node->point, prevNode->point))
+    return FALSE;
+
+  prev2Node = prevNode->prev;
+  /* "..Plus.." because only want angles on same side as point being added. */
+  if ((prev2Node != NULL) && !p2t_sweep_angle_exceeds_plus_90_degrees_or_is_negative (THIS, node->point, nextNode->point, prev2Node->point))
+    return FALSE;
+
+  return TRUE;
+}
+
+gboolean
+p2t_sweep_angle_exceeds_90_degrees(P2tSweep* THIS, P2tPoint* origin, P2tPoint* pa, P2tPoint* pb)
+{
+  gdouble angle = p2t_sweep_angle (THIS, origin, pa, pb);
+  gboolean exceeds90Degrees = ((angle > G_PI_2) || (angle < -G_PI_2));
+  return exceeds90Degrees;
+}
+
+gboolean
+p2t_sweep_angle_exceeds_plus_90_degrees_or_is_negative (P2tSweep* THIS, P2tPoint* origin, P2tPoint* pa, P2tPoint* pb)
+{
+  gdouble angle = p2t_sweep_angle (THIS, origin, pa, pb);
+  gboolean exceedsPlus90DegreesOrIsNegative = (angle > G_PI_2) || (angle < 0);
+  return exceedsPlus90DegreesOrIsNegative;
+}
+
+gdouble
+p2t_sweep_angle (P2tSweep* THIS, P2tPoint* origin, P2tPoint* pa, P2tPoint* pb) {
+  /* Complex plane
+   * ab = cosA +i*sinA
+   * ab = (ax + ay*i)(bx + by*i) = (ax*bx + ay*by) + i(ax*by-ay*bx)
+   * atan2(y,x) computes the principal value of the argument function
+   * applied to the complex number x+iy
+   * Where x = ax*bx + ay*by
+   *       y = ax*by - ay*bx
+   */
+  double px = origin->x;
+  double py = origin->y;
+  double ax = pa->x - px;
+  double ay = pa->y - py;
+  double bx = pb->x - px;
+  double by = pb->y - py;
+  double x = ax * by - ay * bx;
+  double y = ax * bx + ay * by;
+  double angle = atan2(x, y);
+  return angle;
 }
 
 double
