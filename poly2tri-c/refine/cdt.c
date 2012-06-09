@@ -102,7 +102,7 @@ p2tr_cdt_new (P2tCDT *cdt)
     for (j = 0; j < 3; j++)
       {
         P2tPoint *cdt_pt = p2t_triangle_get_point(cdt_tri, j);
-        P2trPoint *new_pt = g_hash_table_lookup (point_map, cdt_pt);
+        P2trPoint *new_pt = (P2trPoint*) g_hash_table_lookup (point_map, cdt_pt);
 
         if (new_pt == NULL)
           {
@@ -124,8 +124,8 @@ p2tr_cdt_new (P2tCDT *cdt)
         P2tPoint *end = p2t_triangle_get_point (cdt_tri, (j + 1) % 3);
         int edge_index = p2t_triangle_edge_index (cdt_tri, start, end);
 
-        P2trPoint *start_new = g_hash_table_lookup (point_map, start);
-        P2trPoint *end_new = g_hash_table_lookup (point_map, end);
+        P2trPoint *start_new = (P2trPoint*) g_hash_table_lookup (point_map, start);
+        P2trPoint *end_new = (P2trPoint*) g_hash_table_lookup (point_map, end);
 
         if (! p2tr_point_has_edge_to (start_new, end_new))
           {
@@ -150,9 +150,9 @@ p2tr_cdt_new (P2tCDT *cdt)
   {
     P2tTriangle *cdt_tri = triangle_index (cdt_tris, i);
 
-    P2trPoint *pt1 = g_hash_table_lookup (point_map, p2t_triangle_get_point (cdt_tri, 0));
-    P2trPoint *pt2 = g_hash_table_lookup (point_map, p2t_triangle_get_point (cdt_tri, 1));
-    P2trPoint *pt3 = g_hash_table_lookup (point_map, p2t_triangle_get_point (cdt_tri, 2));
+    P2trPoint *pt1 = (P2trPoint*) g_hash_table_lookup (point_map, p2t_triangle_get_point (cdt_tri, 0));
+    P2trPoint *pt2 = (P2trPoint*) g_hash_table_lookup (point_map, p2t_triangle_get_point (cdt_tri, 1));
+    P2trPoint *pt3 = (P2trPoint*) g_hash_table_lookup (point_map, p2t_triangle_get_point (cdt_tri, 2));
 
     P2trTriangle *new_tri = p2tr_mesh_new_triangle (rmesh->mesh,
         p2tr_point_get_edge_to(pt1, pt2, FALSE),

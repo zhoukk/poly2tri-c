@@ -209,7 +209,7 @@ p2tr_dt_dequeue_tri (P2trDelaunayTerminator *self)
     return NULL;
   else
     {
-      P2trTriangle *ret = g_sequence_get (first);
+      P2trTriangle *ret = (P2trTriangle*) g_sequence_get (first);
       g_sequence_remove (first);
       return ret;
     }
@@ -232,7 +232,7 @@ p2tr_dt_dequeue_segment (P2trDelaunayTerminator *self)
   if (g_queue_is_empty (&self->Qs))
     return NULL;
   else
-    return g_queue_pop_head (&self->Qs);
+    return (P2trEdge*) g_queue_pop_head (&self->Qs);
 }
 
 static gboolean

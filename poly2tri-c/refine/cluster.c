@@ -48,7 +48,7 @@ p2tr_cluster_shortest_edge_length (P2trCluster *self)
   gdouble min_length_sq = G_MAXDOUBLE, temp;
   GList *iter;
   
-  for (iter = g_queue_peek_head(&self->edges); iter != NULL; iter = iter->next)
+  for (iter = self->edges.head; iter != NULL; iter = iter->next)
     {
       temp = p2tr_edge_get_length_squared ((P2trEdge*)iter->data);
       min_length_sq = MIN(min_length_sq, temp);
@@ -133,7 +133,7 @@ p2tr_cluster_free (P2trCluster *self)
 {
   GList *iter;
   
-  for (iter = g_queue_peek_head(&self->edges); iter != NULL; iter = iter->next)
+  for (iter = self->edges.head; iter != NULL; iter = iter->next)
     p2tr_edge_unref ((P2trEdge*)iter->data);
 
   g_queue_clear (&self->edges);
