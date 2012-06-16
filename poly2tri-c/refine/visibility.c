@@ -230,6 +230,89 @@ p2tr_pslg_visibility_check (P2trPSLG    *pslg,
 }
 #else
 
+/* Refer to the "Ray casting algorithm":
+ *   http://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
+ */
+static gboolean
+PointIsInsidePolygon (P2trVector2 *vec,
+		      P2trPSLG    *polygon)
+{
+  P2trHashSetIter iter;
+  const P2trBoundedLine *polyline = NULL;
+  int count = 0;
+
+  /* So, if we work on the X axis, what we want to check is how many
+   * segments of the polygon cross the line (-inf,y)->(x,y) */
+  p2tr_pslg_iter_init (&iter, polygon);
+  while (p2tr_pslg_iter_next (&iter, &polyline))
+    {
+      if ((polyline->start.y - vec->y) * (polyline->end.y - vec->y) >= 0)
+        continue; /* The line doesn't cross the horizontal line Y = vec->y */
+      if (MIN (polyline->start.x, polyline->end.x) <= vec->x)
+        count++;
+    }
+  return (count % 2) == 1;
+}
+
+/* If the bounded line intersects the polygon in more than two places,
+ * then the answer is simply NO - the line is not completly outside the
+ * polygon.
+ * Else, if the bounded line intersects the polygon twice, we analyze
+ * its end points and middle point:
+ * - If both end-points are inside/on:
+ *   - Test the midpoint - it it's inside then the line goes inside the
+ *     polygon, otherwise it goes outside (remember, we said it
+ *     intersects the polygon exactly twice!)
+ * - Otherwise, there must be a subsegment of the poly-line which is
+ *   partially inside!
+ * Else, if it intersects exactly once:
+ * - If both end-points are inside/on then it's partially inside.
+ * - If exactly one end-points is inside/on then decide by the middle
+ *   point (if it's partially inside then so is the line)
+ * - If both end-points are outside - CAN'T HAPPEN WITH EXACTLY ONE INTERSECTION!
+ * Else, if it does not intersect:
+ * - Test any point inside the bounded line (end-points, middle points,
+ *   etc.). If it's inside then the bounded line is inside. Otherwise
+ *   it is outside
+ */
+static gboolean
+LineIsOutsidePolygon (P2trBoundedLine *line,
+                      P2trPSLG        *polygon)
+{
+  P2trHashSetIter iter;
+  const P2trBoundedLine *polyline = NULL;
+  P2trVector2 middle;
+  gint intersection_count = 0, inside_count = 0;
+
+  p2tr_pslg_iter_init (&iter, polygon);
+  while (p2tr_pslg_iter_next (&iter, &polyline))
+    {
+      if (p2tr_bounded_line_intersect (polyline, line))
+        if (++intersection_count > 2)
+          return FALSE;
+    }
+
+  inside_count += (PointIsInsidePolygon (&line->start, polygon) ? 1 : 0); 
+  inside_count += (PointIsInsidePolygon (&line->end, polygon) ? 1 : 0); 
+  
+  /* To decrease the chance of numeric errors when working on the edge points of
+   * the line, the point we will test is the middle of the input line */
+  middle.x = (line->start.x + line->end.x) / 2;
+  middle.y = (line->start.y + line->end.y) / 2;
+
+  if (intersection_count == 2)
+    {
+      if (inside_count == 2) return PointIsInsidePolygon (&middle, polygon);
+      else return TRUE;
+    }
+  else if (intersection_count == 1)
+    {
+      if (inside_count == 2) return TRUE;
+      else return PointIsInsidePolygon (&middle, polygon);
+    }
+  else return inside_count > 0;
+}
+
 static gboolean
 TryVisibilityAroundBlock(P2trPSLG        *PSLG,
                          P2trVector2     *P,
@@ -252,6 +335,10 @@ TryVisibilityAroundBlock(P2trPSLG        *PSLG,
       P2trBoundedLine PK;
       const P2trBoundedLine *Segment = NULL;
       p2tr_bounded_line_init (&PK, P, &ClosestIntersection);
+
+      /* Now we must make sure that the bounded line PK is inside
+       * the polygon, because otherwise it is not considered as a
+       * valid visibility path */
 
       p2tr_pslg_iter_init (&iter, PSLG);
       while (p2tr_pslg_iter_next (&iter, &Segment))
@@ -276,6 +363,9 @@ TryVisibilityAroundBlock(P2trPSLG        *PSLG,
               return FALSE;
             }
         }
+
+      if (LineIsOutsidePolygon (&PK, PSLG))
+        return FALSE;
 
       /* No obstruction! */
       return TRUE;
