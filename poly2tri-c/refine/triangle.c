@@ -278,10 +278,11 @@ P2trInCircle
 p2tr_triangle_circumcircle_contains_point (P2trTriangle      *self,
                                            const P2trVector2  *pt)
 {
+  /* Points must be given in CCW order! */
   return p2tr_math_incircle (
-      &P2TR_TRIANGLE_GET_POINT(self,0)->c,
-      &P2TR_TRIANGLE_GET_POINT(self,1)->c,
       &P2TR_TRIANGLE_GET_POINT(self,2)->c,
+      &P2TR_TRIANGLE_GET_POINT(self,1)->c,
+      &P2TR_TRIANGLE_GET_POINT(self,0)->c,
       pt);
 }
 

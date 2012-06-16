@@ -555,8 +555,7 @@ p2tr_cdt_try_flip (P2trCDT   *self,
 
   /* Check if the quadriliteral ADBC is concave (because if it is, we
    * can't flip the edge) */
-  if (p2tr_edge_angle_between_positive (DB, BC) >= G_PI - CDT_180_EPS ||
-      p2tr_edge_angle_between_positive (CA, AD) >= G_PI - CDT_180_EPS)
+  if (p2tr_triangle_circumcircle_contains_point (AB->tri, &D->c) != P2TR_INCIRCLE_IN)
     return NULL;
 
   p2tr_edge_remove (AB);
@@ -604,18 +603,15 @@ p2tr_cdt_flip_fix (P2trCDT     *self,
           P2trPoint *A  = P2TR_EDGE_START(edge), *B = edge->end;
           P2trPoint *C1 = p2tr_triangle_get_opposite_point (edge->tri, edge, FALSE);
           P2trPoint *C2 = p2tr_triangle_get_opposite_point (edge->mirror->tri, edge->mirror, FALSE);
-          if (p2tr_triangle_circumcircle_contains_point (edge->tri, &C2->c) == P2TR_INCIRCLE_IN
-              || p2tr_triangle_circumcircle_contains_point (edge->mirror->tri, &C1->c) == P2TR_INCIRCLE_IN)
+
+          P2trEdge *flipped = p2tr_cdt_try_flip (self, edge);
+          if (flipped != NULL)
             {
-              P2trEdge *flipped = p2tr_cdt_try_flip (self, edge);
-              if (flipped != NULL)
-                {
-                  p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (A, C1, TRUE));
-                  p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (A, C2, TRUE));
-                  p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (B, C1, TRUE));
-                  p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (B, C2, TRUE));
-                  p2tr_edge_unref (flipped);
-                }
+              p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (A, C1, TRUE));
+              p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (A, C2, TRUE));
+              p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (B, C1, TRUE));
+              p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (B, C2, TRUE));
+              p2tr_edge_unref (flipped);
             }
         }
 

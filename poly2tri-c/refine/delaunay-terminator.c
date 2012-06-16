@@ -294,7 +294,10 @@ p2tr_dt_refine (P2trDelaunayTerminator *self,
           /* If no edge is encroached, then this must be
            * inside the triangulation domain!!! */
           if (triContaining_c == NULL)
-            p2tr_exception_geometric ("Should not happen! (%f, %f) is outside the domain!", c->x, c->y);
+            p2tr_exception_geometric ("Should not happen! (%f, %f) (Center of (%f,%f)->(%f,%f)->(%f,%f)) is outside the domain!", c->x, c->y,
+            t->edges[2]->end->c.x, t->edges[2]->end->c.y,
+            t->edges[0]->end->c.x, t->edges[0]->end->c.y,
+            t->edges[1]->end->c.x, t->edges[1]->end->c.y);
 
           /* Now, check if this point would encroach any edge
            * of the triangulation */

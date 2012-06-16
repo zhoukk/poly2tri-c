@@ -226,6 +226,7 @@ P2trOrientation p2tr_math_orient2d (const P2trVector2 *A,
 
 #define INCIRCLE_EPSILON 1e-9
 
+/* Points must be given in CCW order!!!!! */
 P2trInCircle
 p2tr_math_incircle (const P2trVector2 *A,
                     const P2trVector2 *B,
