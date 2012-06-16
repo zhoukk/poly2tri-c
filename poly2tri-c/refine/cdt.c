@@ -47,17 +47,18 @@ static gboolean  p2tr_cdt_visible_from_tri        (P2trCDT      *self,
 static gboolean  p2tr_cdt_has_empty_circum_circle (P2trCDT      *self,
                                                    P2trTriangle *tri);
 
-static GList*    p2tr_cdt_triangulate_fan         (P2trCDT   *self,
-                                                   P2trPoint *center,
-                                                   GList     *edge_pts);
+static P2trHashSet* p2tr_cdt_triangulate_fan         (P2trCDT   *self,
+                                                      P2trPoint *center,
+                                                      GList     *edge_pts);
 
-static void      p2tr_cdt_flip_fix                (P2trCDT *self,
-                                                   GList   *initial_triangles);
+static void         p2tr_cdt_add_edge (P2trHashSet *candidates,
+                                       P2trEdge    *candidate);
 
-static gboolean  p2tr_cdt_try_flip                (P2trCDT   *self,
-                                                   P2trEdge  *to_flip,
-                                                   GQueue    *new_tris,
-                                                   P2trEdge **new_edge);
+static void      p2tr_cdt_flip_fix                (P2trCDT     *self,
+                                                   P2trHashSet *candidates);
+
+static P2trEdge*  p2tr_cdt_try_flip                (P2trCDT   *self,
+                                                    P2trEdge  *to_flip);
 
 static void      p2tr_cdt_on_new_point            (P2trCDT   *self,
                                                    P2trPoint *pt);
@@ -89,6 +90,7 @@ p2tr_cdt_new (P2tCDT *cdt)
   P2trCDT *rmesh = g_slice_new (P2trCDT);
   GHashTableIter iter;
   P2trPoint *pt_iter = NULL;
+  P2trHashSet *new_edges = p2tr_hash_set_new_default ();
 
   gint i, j;
 
@@ -140,7 +142,7 @@ p2tr_cdt_new (P2tCDT *cdt)
 
             /* We only wanted to create the edge now. We will use it
              * later */
-            p2tr_edge_unref (edge);
+            p2tr_cdt_add_edge (new_edges, edge);
           }
       }
   }
@@ -162,6 +164,10 @@ p2tr_cdt_new (P2tCDT *cdt)
     /* We won't do any usage of the triangle, so just unref it */
     p2tr_triangle_unref (new_tri);
   }
+
+  /* And do an extra flip fix */
+  p2tr_cdt_flip_fix (rmesh, new_edges);
+  p2tr_hash_set_free (new_edges);
 
   /* Now finally unref the points we added into the map */
   g_hash_table_iter_init (&iter, point_map);
@@ -347,7 +353,7 @@ p2tr_cdt_insert_point_into_triangle (P2trCDT      *self,
                                      P2trPoint    *P,
                                      P2trTriangle *tri)
 {
-  GList *new_tris;
+  P2trHashSet *flip_candidates = p2tr_hash_set_new_default ();
 
   P2trPoint *A = tri->edges[0]->end;
   P2trPoint *B = tri->edges[1]->end;
@@ -365,35 +371,38 @@ p2tr_cdt_insert_point_into_triangle (P2trCDT      *self,
   BP = p2tr_mesh_new_edge (self->mesh, B, P, FALSE);
   CP = p2tr_mesh_new_edge (self->mesh, C, P, FALSE);
 
-  new_tris = p2tr_utils_new_reversed_pointer_list (3,
-      p2tr_mesh_new_triangle (self->mesh, AB, BP, AP->mirror),
-      p2tr_mesh_new_triangle (self->mesh, BC, CP, BP->mirror),
-      p2tr_mesh_new_triangle (self->mesh, CA, AP, CP->mirror));
+  p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh, AB, BP, AP->mirror));
+  p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh, BC, CP, BP->mirror));
+  p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh, CA, AP, CP->mirror));
 
-  p2tr_edge_unref (CP);
-  p2tr_edge_unref (BP);
-  p2tr_edge_unref (AP);
+  p2tr_cdt_add_edge (flip_candidates, CP);
+  p2tr_cdt_add_edge (flip_candidates, AP);
+  p2tr_cdt_add_edge (flip_candidates, BP);
+
+  p2tr_cdt_add_edge (flip_candidates, p2tr_edge_ref (CA));
+  p2tr_cdt_add_edge (flip_candidates, p2tr_edge_ref (AB));
+  p2tr_cdt_add_edge (flip_candidates, p2tr_edge_ref (BC));
 
   /* Flip fix the newly created triangles to preserve the the
    * constrained delaunay property. The flip-fix function will unref the
    * new triangles for us! */
-  p2tr_cdt_flip_fix (self, new_tris);
+  p2tr_cdt_flip_fix (self, flip_candidates);
 
-  g_list_free (new_tris);
+  p2tr_hash_set_free (flip_candidates);
 }
 
 /**
  * Triangulate a polygon by creating edges to a center point.
  * 1. If there is a NULL point in the polygon, two triangles are not
  *    created (these are the two that would have used it)
- * 2. THE RETURNED TRIANGLES MUST BE UNREFFED!
+ * 2. THE RETURNED EDGES MUST BE UNREFFED!
  */
-static GList*
+static P2trHashSet*
 p2tr_cdt_triangulate_fan (P2trCDT   *self,
                           P2trPoint *center,
                           GList     *edge_pts)
 {
-  GList *new_tris = NULL;
+  P2trHashSet* fan_edges = p2tr_hash_set_new_default ();
   GList *iter;
 
   /* We can not triangulate unless at least two points are given */
@@ -408,7 +417,6 @@ p2tr_cdt_triangulate_fan (P2trCDT   *self,
       P2trPoint *A = (P2trPoint*) iter->data;
       P2trPoint *B = (P2trPoint*) g_list_cyclic_next (edge_pts, iter)->data;
       P2trEdge *AB, *BC, *CA;
-      P2trTriangle *tri;
 
       if (A == NULL || B == NULL)
         continue;
@@ -417,15 +425,14 @@ p2tr_cdt_triangulate_fan (P2trCDT   *self,
       BC = p2tr_mesh_new_or_existing_edge (self->mesh, B, center, FALSE);
       CA = p2tr_mesh_new_or_existing_edge (self->mesh, center, A, FALSE);
 
-      tri = p2tr_mesh_new_triangle (self->mesh, AB, BC, CA);
-      new_tris = g_list_prepend (new_tris, tri);
+      p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh, AB, BC, CA));
 
-      p2tr_edge_unref (CA);
-      p2tr_edge_unref (BC);
-      p2tr_edge_unref (AB);
+      p2tr_cdt_add_edge (fan_edges, CA);
+      p2tr_cdt_add_edge (fan_edges, BC);
+      p2tr_cdt_add_edge (fan_edges, AB);
     }
 
-  return new_tris;
+  return fan_edges;
 }
 
 GList*
@@ -448,7 +455,8 @@ p2tr_cdt_split_edge (P2trCDT   *self,
   P2trPoint *W = (e->mirror->tri != NULL) ? p2tr_triangle_get_opposite_point (e->mirror->tri, e->mirror, FALSE) : NULL;
   gboolean   constrained = e->constrained;
   P2trEdge  *XC, *CY;
-  GList     *new_tris = NULL, *fan = NULL, *new_edges = NULL;
+  GList     *fan = NULL, *new_edges = NULL;
+  P2trHashSet *fan_edges;
 
   p2tr_cdt_validate_unused (self);
 
@@ -458,15 +466,15 @@ p2tr_cdt_split_edge (P2trCDT   *self,
   CY = p2tr_mesh_new_edge (self->mesh, C, Y, constrained);
 
   fan = p2tr_utils_new_reversed_pointer_list (4, W, X, V, Y);
-  new_tris = p2tr_cdt_triangulate_fan (self, C, fan);
+  fan_edges = p2tr_cdt_triangulate_fan (self, C, fan);
   g_list_free (fan);
 
   /* Now make this a CDT again
    * The new triangles will be unreffed by the flip_fix function, which
    * is good since we receive them with an extra reference!
    */
-  p2tr_cdt_flip_fix (self, new_tris);
-  g_list_free (new_tris);
+  p2tr_cdt_flip_fix (self, fan_edges);
+  p2tr_hash_set_free (fan_edges);
 
   if (constrained)
     {
@@ -513,86 +521,14 @@ p2tr_cdt_split_edge (P2trCDT   *self,
  * handle that case.
  */
 
+#define CDT_180_EPS (1e-4)
 /**
- * THE GIVEN INPUT TRIANGLES MUST BE GIVEN WITH AN EXTRA REFERENCE SINCE
- * THEY WILL BE UNREFFED!
+ * Try to flip a given edge, If successfull, return the new edge (reffed!),
+ * otherwise return NULL
  */
-static void
-p2tr_cdt_flip_fix (P2trCDT *self,
-                   GList   *initial_triangles)
-{
-  GQueue flipped_edges, tris_to_fix;
-  GList *iter;
-
-  p2tr_cdt_validate_unused (self);
-
-  g_queue_init (&flipped_edges);
-  g_queue_init (&tris_to_fix);
-
-  for (iter = initial_triangles; iter != NULL; iter = iter->next)
-    g_queue_push_tail (&tris_to_fix, iter->data);
-
-  while (! g_queue_is_empty (&tris_to_fix))
-    {
-      P2trTriangle *tri = (P2trTriangle*)g_queue_pop_head (&tris_to_fix);
-      P2trCircle   circum_circle;
-      gint         i;
-
-      if (p2tr_triangle_is_removed (tri))
-        {
-          p2tr_triangle_unref (tri);
-          continue;
-        }
-
-      p2tr_triangle_get_circum_circle (tri, &circum_circle);
-
-      for (i = 0; i < 3; i++)
-        {
-          P2trEdge  *e = tri->edges[i];
-          P2trPoint *opposite;
-
-          if (e->constrained || e->delaunay)
-              continue;
-
-          opposite = p2tr_triangle_get_opposite_point (e->mirror->tri, e->mirror, FALSE);
-          if (! p2tr_circle_test_point_outside(&circum_circle, &opposite->c))
-            {
-              P2trEdge *flipped = NULL;
-              if (p2tr_cdt_try_flip (self, e, &tris_to_fix, &flipped))
-                {
-                  g_queue_push_tail (&flipped_edges, flipped);
-                  /* Stop iterating this triangle since it doesn't exist
-                   * any more */
-                  break;
-                }
-            }
-        }
-
-      /* We are finished with the triangle, so unref it as promised */
-      p2tr_triangle_unref (tri);
-    }
-
-  while (! g_queue_is_empty (&flipped_edges))
-    {
-      P2trEdge *e = (P2trEdge*) g_queue_pop_head (&flipped_edges);
-      e->delaunay = e->mirror->delaunay = FALSE;
-      p2tr_edge_unref (e);
-    }
-  p2tr_cdt_validate_unused (self);
-}
-
-/**
- * Try to flip a given edge. If successfull, return the new edge on
- * @ref new_edge, append the new triangles to @ref new_tris and return
- * TRUE.
- * THE NEW TRIANGLES MUST BE UNREFFED!
- * THE NEW EDGE MUST BE UNREFFED!
- */
-static gboolean
+static P2trEdge*
 p2tr_cdt_try_flip (P2trCDT   *self,
-                   P2trEdge  *to_flip,
-                   GQueue    *new_tris,
-                   P2trEdge **new_edge)
+                   P2trEdge  *to_flip)
 {
   /*    C
    *  / | \
@@ -601,48 +537,90 @@ p2tr_cdt_try_flip (P2trCDT   *self,
    *    D
    */
   P2trPoint *A, *B, *C, *D;
-  P2trTriangle *ABC, *ADB;
-  P2trEdge *DC;
+  P2trEdge *AB, *CA, *AD, *DB, *BC, *DC;
 
-  *new_edge = NULL;
-
-  if (to_flip->constrained || to_flip->delaunay)
-    {
-      return FALSE;
-    }
+  g_assert (! to_flip->constrained && ! to_flip->delaunay);
 
   A = P2TR_EDGE_START (to_flip);
   B = to_flip->end;
   C = p2tr_triangle_get_opposite_point (to_flip->tri, to_flip, FALSE);
   D = p2tr_triangle_get_opposite_point (to_flip->mirror->tri, to_flip->mirror, FALSE);
 
-  ABC = to_flip->tri;
-  ADB = to_flip->mirror->tri;
+  AB = to_flip;
+
+  CA = p2tr_point_get_edge_to (C, A, FALSE);
+  AD = p2tr_point_get_edge_to (A, D, FALSE);
+  DB = p2tr_point_get_edge_to (D, B, FALSE);
+  BC = p2tr_point_get_edge_to (B, C, FALSE);
 
   /* Check if the quadriliteral ADBC is concave (because if it is, we
    * can't flip the edge) */
-  if (p2tr_triangle_get_angle_at(ABC, A) + p2tr_triangle_get_angle_at(ADB, A) >= G_PI ||
-      p2tr_triangle_get_angle_at(ABC, B) + p2tr_triangle_get_angle_at(ADB, B) >= G_PI)
-    return FALSE;
+  if (p2tr_edge_angle_between_positive (DB, BC) >= G_PI - CDT_180_EPS ||
+      p2tr_edge_angle_between_positive (CA, AD) >= G_PI - CDT_180_EPS)
+    return NULL;
 
-  p2tr_edge_remove (to_flip);
+  p2tr_edge_remove (AB);
 
   DC = p2tr_mesh_new_edge (self->mesh, D, C, FALSE);
-  DC->delaunay = DC->mirror->delaunay = TRUE;
 
-  g_queue_push_tail (new_tris, p2tr_mesh_new_triangle (self->mesh,
-      p2tr_point_get_edge_to (C, A, FALSE),
-      p2tr_point_get_edge_to (A, D, FALSE),
-      DC));
+  p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh,
+      CA, AD, DC));
 
-  g_queue_push_tail (new_tris, p2tr_mesh_new_triangle (self->mesh,
-      p2tr_point_get_edge_to (D, B, FALSE),
-      p2tr_point_get_edge_to (B, C, FALSE),
-      DC->mirror));
+  p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh,
+      DB, BC, DC->mirror));
 
-  *new_edge = DC;
+  return DC;
+}
 
-  return TRUE;
+static void
+p2tr_cdt_add_edge (P2trHashSet *candidates,
+                   P2trEdge    *candidate)
+{
+  if (p2tr_hash_set_contains (candidates, candidate->mirror) ||
+      p2tr_hash_set_contains (candidates, candidate))
+    p2tr_edge_unref (candidate);
+  else
+    p2tr_hash_set_insert (candidates, candidate);
+}
+
+static void
+p2tr_cdt_flip_fix (P2trCDT     *self,
+                   P2trHashSet *candidates)
+{
+  P2trHashSetIter iter;
+  while (TRUE)
+    {
+      P2trEdge* edge = NULL;
+      p2tr_hash_set_iter_init (&iter, candidates);
+      if (! p2tr_hash_set_iter_next (&iter, (gpointer*)&edge))
+        break;
+
+      p2tr_hash_set_remove (candidates, edge);
+
+      if (! edge->constrained && ! p2tr_edge_is_removed (edge))
+        {
+          /* If the edge is not constrained, then it should be
+           * a part of two triangles */
+          P2trPoint *A  = P2TR_EDGE_START(edge), *B = edge->end;
+          P2trPoint *C1 = p2tr_triangle_get_opposite_point (edge->tri, edge, FALSE);
+          P2trPoint *C2 = p2tr_triangle_get_opposite_point (edge->mirror->tri, edge->mirror, FALSE);
+          if (p2tr_triangle_circumcircle_contains_point (edge->tri, &C2->c) == P2TR_INCIRCLE_IN
+              || p2tr_triangle_circumcircle_contains_point (edge->mirror->tri, &C1->c) == P2TR_INCIRCLE_IN)
+            {
+              P2trEdge *flipped = p2tr_cdt_try_flip (self, edge);
+              if (flipped != NULL)
+                {
+                  p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (A, C1, TRUE));
+                  p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (A, C2, TRUE));
+                  p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (B, C1, TRUE));
+                  p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (B, C2, TRUE));
+                  p2tr_edge_unref (flipped);
+                }
+            }
+        }
+
+      p2tr_edge_unref (edge);
+    }
 }
 
 /* Whenever a new point was inserted, it may disturb triangles
@@ -655,6 +633,7 @@ static void
 p2tr_cdt_on_new_point (P2trCDT   *self,
                        P2trPoint *pt)
 {
+#if FALSE
   GList *bad_tris = NULL;
   P2trTriangle *tri;
   P2trHashSetIter iter;
@@ -672,5 +651,6 @@ p2tr_cdt_on_new_point (P2trCDT   *self,
 
   p2tr_cdt_flip_fix (self, bad_tris);
   g_list_free (bad_tris);
+#endif
 }
 

@@ -219,3 +219,13 @@ p2tr_edge_angle_between(P2trEdge *e1, P2trEdge *e2)
 
   return result;
 }
+
+gdouble
+p2tr_edge_angle_between_positive (P2trEdge *e1, P2trEdge *e2)
+{
+  gdouble result = p2tr_edge_angle_between (e1, e2);
+  if (result < 0)
+    return result + 2 * G_PI;
+  else
+    return result;
+}

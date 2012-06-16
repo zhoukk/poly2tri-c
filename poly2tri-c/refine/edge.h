@@ -98,4 +98,7 @@ gdouble     p2tr_edge_get_length_squared   (P2trEdge* self);
 gdouble     p2tr_edge_angle_between        (P2trEdge *e1,
                                             P2trEdge *e2);
 
+gdouble     p2tr_edge_angle_between_positive (P2trEdge *e1,
+                                              P2trEdge *e2);
+
 #endif

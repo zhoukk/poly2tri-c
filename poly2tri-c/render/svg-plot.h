@@ -39,8 +39,8 @@
 #define ARROW_SIDE_ANGLE (G_PI / 180 * 30)
 #define ARROW_HEAD_SIZE 2.0
 
-#define X_SCALE 3.
-#define Y_SCALE 3.
+#define X_SCALE 1.
+#define Y_SCALE 1.
 #define X_TRANSLATE 500.
 #define Y_TRANSLATE 500.
 
