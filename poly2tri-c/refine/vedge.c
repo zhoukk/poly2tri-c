@@ -30,13 +30,82 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __P2TC_REFINE_TRIANGULATION_H__
-#define __P2TC_REFINE_TRIANGULATION_H__
+#include <math.h>
+#include <glib.h>
 
-typedef struct P2trPoint_     P2trPoint;
-typedef struct P2trEdge_      P2trEdge;
-typedef struct P2trTriangle_  P2trTriangle;
-typedef struct P2trMesh_      P2trMesh;
+#include "point.h"
+#include "edge.h"
+#include "vedge.h"
+#include "mesh.h"
 
-typedef struct P2trVEdge_     P2trVEdge;
-#endif
+static void
+p2tr_vedge_init (P2trVEdge *self,
+                 P2trPoint *start,
+                 P2trPoint *end)
+{
+  self->start    = start;
+  self->end      = end;
+  self->refcount = 0;
+}
+
+P2trVEdge*
+p2tr_vedge_new (P2trPoint *start,
+                P2trPoint *end)
+{
+  P2trVEdge *self   = g_slice_new (P2trVEdge);
+
+  p2tr_vedge_init (self, start, end);
+
+  p2tr_point_ref (start);
+  p2tr_point_ref (end);
+  
+  ++self->refcount;
+  return self;
+}
+
+P2trVEdge*
+p2tr_vedge_new2 (P2trEdge  *real)
+{
+  return p2tr_vedge_new (P2TR_EDGE_START (real), real->end);
+}
+
+P2trVEdge*
+p2tr_vedge_ref (P2trVEdge *self)
+{
+  ++self->refcount;
+  return self;
+}
+
+void
+p2tr_vedge_unref (P2trVEdge *self)
+{
+  g_assert (self->refcount > 0);
+  if (--self->refcount == 0)
+    p2tr_vedge_free (self);
+}
+
+P2trEdge*
+p2tr_edge_is_real (P2trVEdge *self)
+{
+  return p2tr_point_has_edge_to (self->start, self->end);
+}
+
+void
+p2tr_vedge_free (P2trVEdge *self)
+{
+  p2tr_point_unref (self->start);
+  p2tr_point_unref (self->end);
+  g_slice_free (P2trVEdge, self);
+}
+
+P2trMesh*
+p2tr_vedge_get_mesh (P2trVEdge *self)
+{
+  return p2tr_point_get_mesh (self->end);
+}
+
+P2trEdge*
+p2tr_vedge_get (P2trVEdge *self)
+{
+  return p2tr_point_get_edge_to (self->start, self->end, TRUE);
+}

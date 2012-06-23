@@ -47,6 +47,8 @@
 #include "triangle.h"
 #include "mesh.h"
 
+#include "vedge.h"
+
 #include "cluster.h"
 #include "cdt.h"
 #include "refiner.h"

@@ -30,13 +30,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __P2TC_REFINE_TRIANGULATION_H__
-#define __P2TC_REFINE_TRIANGULATION_H__
+#ifndef __P2TC_REFINE_VEDGE_H__
+#define __P2TC_REFINE_VEDGE_H__
 
-typedef struct P2trPoint_     P2trPoint;
-typedef struct P2trEdge_      P2trEdge;
-typedef struct P2trTriangle_  P2trTriangle;
-typedef struct P2trMesh_      P2trMesh;
+#include <glib.h>
+#include "circle.h"
+#include "triangulation.h"
 
-typedef struct P2trVEdge_     P2trVEdge;
+/**
+ * @struct P2trVEdge_
+ * A struct for representing a potential ("virtual") edge in a
+ * triangular mesh
+ */
+struct P2trVEdge_
+{
+  /** The start point of this virtual edge */
+  P2trPoint *start;
+  /** The end point of this virtual edge */
+  P2trPoint *end;
+
+  /** A count of references to the virtual edge */
+  guint         refcount;
+};
+
+P2trVEdge*  p2tr_vedge_new       (P2trPoint *start,
+                                  P2trPoint *end);
+
+P2trVEdge*  p2tr_vedge_new2      (P2trEdge  *real);
+
+P2trVEdge*  p2tr_vedge_ref       (P2trVEdge *self);
+
+void        p2tr_vedge_unref     (P2trVEdge *self);
+
+void        p2tr_vedge_free      (P2trVEdge *self);
+
+P2trMesh*   p2tr_vedge_get_mesh  (P2trVEdge *self);
+
+P2trEdge*   p2tr_vedge_is_real   (P2trVEdge *self);
+
+P2trEdge*   p2tr_vedge_get       (P2trVEdge *self);
 #endif
