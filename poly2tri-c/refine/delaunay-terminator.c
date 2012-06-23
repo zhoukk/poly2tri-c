@@ -241,15 +241,10 @@ p2tr_dt_segment_queue_is_empty (P2trDelaunayTerminator *self)
   return g_queue_is_empty (&self->Qs);
 }
 
-gboolean
-p2tr_dt_false_too_big (P2trTriangle *tri)
-{
-  return FALSE;
-}
-
 void
-p2tr_dt_refine (P2trDelaunayTerminator *self,
-                gint                    max_steps)
+p2tr_dt_refine (P2trDelaunayTerminator   *self,
+                gint                      max_steps,
+                P2trRefineProgressNotify  on_progress)
 {
   P2trHashSetIter hs_iter;
   P2trEdge *s;
@@ -266,13 +261,15 @@ p2tr_dt_refine (P2trDelaunayTerminator *self,
     if (s->constrained && p2tr_cdt_is_encroached (s))
       p2tr_dt_enqueue_segment (self, s);
 
-  SplitEncroachedSubsegments (self, 0, p2tr_dt_false_too_big);
+  SplitEncroachedSubsegments (self, 0, p2tr_refiner_false_too_big);
   p2tr_cdt_validate_cdt(self->mesh);
 
   p2tr_hash_set_iter_init (&hs_iter, self->mesh->mesh->triangles);
   while (p2tr_hash_set_iter_next (&hs_iter, (gpointer*)&t))
     if (p2tr_triangle_smallest_non_constrained_angle (t) < self->theta)
       p2tr_dt_enqueue_tri (self, t);
+
+  if (on_progress != NULL) on_progress ((P2trRefiner*) self, steps, max_steps);
 
   while (! p2tr_dt_tri_queue_is_empty (self))
     {
@@ -331,6 +328,8 @@ p2tr_dt_refine (P2trDelaunayTerminator *self,
       }
 
       p2tr_triangle_unref (t);
+
+      if (on_progress != NULL) on_progress ((P2trRefiner*) self, steps, max_steps);
     }
 }
 

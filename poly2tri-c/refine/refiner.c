@@ -30,41 +30,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __P2TC_REFINE_DELAUNAY_TERMINATOR_H__
-#define __P2TC_REFINE_DELAUNAY_TERMINATOR_H__
-
 #include <glib.h>
 #include "cdt.h"
+#include "delaunay-terminator.h"
 #include "refiner.h"
 
-typedef struct
+#define P2TR_REFINER_REAL_TYPE P2trDelaunayTerminator
+
+#define P2T_REFINER_TO_IMP(X) ((P2TR_REFINER_REAL_TYPE*)(X))
+#define P2T_IMP_TO_REFINER(X) ((P2trRefiner*)(X))
+
+gboolean
+p2tr_refiner_false_too_big (P2trTriangle *tri)
 {
-  P2trCDT            *mesh;
-  GQueue              Qs;
-  GSequence          *Qt;
-  gdouble             theta;
-  P2trTriangleTooBig  delta;
-} P2trDelaunayTerminator;
+  return FALSE;
+}
 
-gboolean  p2tr_cdt_test_encroachment_ignore_visibility (const P2trVector2 *w,
-                                                        P2trEdge          *e);
+P2trRefiner*
+p2tr_refiner_new (gdouble             min_angle,
+                  P2trTriangleTooBig  size_control,
+                  P2trCDT            *cdt)
+{
+  return P2T_IMP_TO_REFINER (p2tr_dt_new (min_angle, size_control, cdt));
+}
 
-gboolean  p2tr_cdt_is_encroached_by (P2trCDT     *self,
-                                     P2trEdge    *e,
-                                     P2trVector2 *p);
+void
+p2tr_refiner_free (P2trRefiner *self)
+{
+  p2tr_dt_free (P2T_REFINER_TO_IMP (self));
+}
 
-P2trHashSet*  p2tr_cdt_get_segments_encroached_by (P2trCDT     *self,
-                                                   P2trVector2 *C);
+void
+p2tr_refiner_refine (P2trRefiner             *self,
+                     gint                     max_steps,
+                     P2trRefineProgressNotify on_progress)
+{
+  p2tr_dt_refine (P2T_REFINER_TO_IMP (self), max_steps, on_progress);
+}
 
-gboolean      p2tr_cdt_is_encroached (P2trEdge *E);
-
-P2trDelaunayTerminator*
-p2tr_dt_new (gdouble theta, P2trTriangleTooBig delta, P2trCDT *cdt);
-
-void p2tr_dt_free (P2trDelaunayTerminator *self);
-
-void p2tr_dt_refine (P2trDelaunayTerminator   *self,
-                     gint                      max_steps,
-                     P2trRefineProgressNotify  on_progress);
-
-#endif

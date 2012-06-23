@@ -203,7 +203,7 @@ gint main (int argc, char *argv[])
 
   P2tCDT *cdt;
   P2trCDT *rcdt;
-  P2trDelaunayTerminator *dt;
+  P2trRefiner *refiner;
 
   context = g_option_context_new ("- Create a fine mesh from a given PSLG");
   g_option_context_add_main_entries (context, entries, NULL);
@@ -269,9 +269,9 @@ gint main (int argc, char *argv[])
   if (refine_max_steps > 0)
     {
       g_print ("Refining the mesh!\n"); 
-      dt = p2tr_dt_new (G_PI / 6, p2tr_dt_false_too_big, rcdt);
-      p2tr_dt_refine (dt, refine_max_steps);
-      p2tr_dt_free (dt);
+      refiner = p2tr_refiner_new (G_PI / 6, p2tr_refiner_false_too_big, rcdt);
+      p2tr_refiner_refine (refiner, refine_max_steps, NULL);
+      p2tr_refiner_free (refiner);
     }
 
   if (render_svg)

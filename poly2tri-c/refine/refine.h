@@ -49,6 +49,6 @@
 
 #include "cluster.h"
 #include "cdt.h"
-#include "delaunay-terminator.h"
+#include "refiner.h"
 
 #endif

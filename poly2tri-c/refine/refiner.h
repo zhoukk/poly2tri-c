@@ -30,41 +30,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __P2TC_REFINE_DELAUNAY_TERMINATOR_H__
-#define __P2TC_REFINE_DELAUNAY_TERMINATOR_H__
+#ifndef __P2TC_REFINE_REFINER_H__
+#define __P2TC_REFINE_REFINER_H__
 
 #include <glib.h>
 #include "cdt.h"
-#include "refiner.h"
 
-typedef struct
-{
-  P2trCDT            *mesh;
-  GQueue              Qs;
-  GSequence          *Qt;
-  gdouble             theta;
-  P2trTriangleTooBig  delta;
-} P2trDelaunayTerminator;
+typedef struct P2trRefiner_ P2trRefiner;
 
-gboolean  p2tr_cdt_test_encroachment_ignore_visibility (const P2trVector2 *w,
-                                                        P2trEdge          *e);
 
-gboolean  p2tr_cdt_is_encroached_by (P2trCDT     *self,
-                                     P2trEdge    *e,
-                                     P2trVector2 *p);
+typedef gboolean (*P2trTriangleTooBig)       (P2trTriangle *tri);
 
-P2trHashSet*  p2tr_cdt_get_segments_encroached_by (P2trCDT     *self,
-                                                   P2trVector2 *C);
+gboolean         p2tr_refiner_false_too_big  (P2trTriangle *tri);
 
-gboolean      p2tr_cdt_is_encroached (P2trEdge *E);
 
-P2trDelaunayTerminator*
-p2tr_dt_new (gdouble theta, P2trTriangleTooBig delta, P2trCDT *cdt);
+typedef void     (*P2trRefineProgressNotify) (P2trRefiner  *refiner,
+                                              int           step_number,
+                                              int           max_steps);
 
-void p2tr_dt_free (P2trDelaunayTerminator *self);
+P2trRefiner* p2tr_refiner_new    (gdouble                   min_angle,
+                                  P2trTriangleTooBig        size_control,
+                                  P2trCDT                  *cdt);
 
-void p2tr_dt_refine (P2trDelaunayTerminator   *self,
-                     gint                      max_steps,
-                     P2trRefineProgressNotify  on_progress);
+void         p2tr_refiner_free   (P2trRefiner              *self);
+
+void         p2tr_refiner_refine (P2trRefiner              *self,
+                                  gint                      max_steps,
+                                  P2trRefineProgressNotify  on_progress);
 
 #endif
