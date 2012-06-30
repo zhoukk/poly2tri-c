@@ -43,56 +43,6 @@
 static P2trEdge*  p2tr_cdt_try_flip  (P2trCDT   *self,
                                       P2trEdge  *to_flip);
 
-P2trFlipSet*
-p2tr_flip_set_new ()
-{
-  return p2tr_hash_set_new (
-      (GHashFunc)      p2tr_vedge_undirected_hash,
-      (GEqualFunc)     p2tr_vedge_undirected_equals,
-      NULL
-  );
-}
-
-void
-p2tr_flip_set_add (P2trFlipSet *self,
-                   P2trEdge    *to_flip)
-{
-  p2tr_flip_set_add2 (self, p2tr_vedge_new2 (to_flip));
-  p2tr_edge_unref (to_flip);
-}
-
-void
-p2tr_flip_set_add2 (P2trFlipSet *self,
-                    P2trVEdge   *to_flip)
-{
-  if (p2tr_hash_set_contains (self, to_flip))
-    p2tr_vedge_unref (to_flip);
-  else
-    p2tr_hash_set_insert (self, to_flip);
-}
-
-gboolean
-p2tr_flip_set_pop (P2trFlipSet  *self,
-                   P2trVEdge   **value)
-{
-  P2trHashSetIter iter;
-  p2tr_hash_set_iter_init (&iter, self);
-  if (p2tr_hash_set_iter_next (&iter, (gpointer*) value))
-    {
-      p2tr_hash_set_remove (self, *value);
-      return TRUE;
-    }
-  else
-    return FALSE;
-}
-
-void
-p2tr_flip_set_free (P2trFlipSet *self)
-{
-  g_assert (p2tr_hash_set_size (self) == 0);
-  p2tr_hash_set_free (self);
-}
-
 /* This function implements "Lawson's algorithm", also known as "The
  * diagonal swapping algorithm". This algorithm takes a CDT, and a list
  * of triangles that were formed by the insertion of a new point into
@@ -121,12 +71,12 @@ p2tr_flip_set_free (P2trFlipSet *self)
 
 void
 p2tr_cdt_flip_fix (P2trCDT     *self,
-                   P2trFlipSet *candidates)
+                   P2trVEdgeSet *candidates)
 {
   P2trEdge *edge;
   P2trVEdge *vedge;
 
-  while (p2tr_flip_set_pop (candidates, &vedge))
+  while (p2tr_vedge_set_pop (candidates, &vedge))
     {
       if (! p2tr_vedge_try_get_and_unref (vedge, &edge))
         continue;
@@ -144,10 +94,10 @@ p2tr_cdt_flip_fix (P2trCDT     *self,
           P2trEdge *flipped = p2tr_cdt_try_flip (self, edge);
           if (flipped != NULL)
             {
-              p2tr_flip_set_add2 (candidates, p2tr_vedge_new (A, C1));
-              p2tr_flip_set_add2 (candidates, p2tr_vedge_new (A, C2));
-              p2tr_flip_set_add2 (candidates, p2tr_vedge_new (B, C1));
-              p2tr_flip_set_add2 (candidates, p2tr_vedge_new (B, C2));
+              p2tr_vedge_set_add2 (candidates, p2tr_vedge_new (A, C1));
+              p2tr_vedge_set_add2 (candidates, p2tr_vedge_new (A, C2));
+              p2tr_vedge_set_add2 (candidates, p2tr_vedge_new (B, C1));
+              p2tr_vedge_set_add2 (candidates, p2tr_vedge_new (B, C2));
               p2tr_edge_unref (flipped);
             }
         }
@@ -205,19 +155,5 @@ p2tr_cdt_try_flip (P2trCDT   *self,
   return DC;
 }
 
-gboolean
-p2tr_vedge_undirected_equals (const P2trVEdge *e1,
-                              const P2trVEdge *e2)
-{
-  return ((e1 == NULL) == (e2 == NULL)) &&
-      (e1 == e2
-      || (e1->start == e2->start && e1->end == e2->end)
-      || (e1->end == e2->start && e1->start == e2->end));
-}
 
-guint
-p2tr_vedge_undirected_hash (const P2trVEdge *edge)
-{
-  return g_direct_hash (edge->start) ^ g_direct_hash (edge->end);
-}
 

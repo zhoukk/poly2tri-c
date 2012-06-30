@@ -120,3 +120,69 @@ p2tr_vedge_try_get_and_unref (P2trVEdge  *self,
   p2tr_vedge_unref (self);
   return (*real = real_one) != NULL;
 }
+
+P2trVEdgeSet*
+p2tr_vedge_set_new ()
+{
+  return p2tr_hash_set_new (
+      (GHashFunc)      p2tr_vedge_undirected_hash,
+      (GEqualFunc)     p2tr_vedge_undirected_equals,
+      NULL
+  );
+}
+
+void
+p2tr_vedge_set_add (P2trVEdgeSet *self,
+                   P2trEdge    *to_flip)
+{
+  p2tr_vedge_set_add2 (self, p2tr_vedge_new2 (to_flip));
+  p2tr_edge_unref (to_flip);
+}
+
+void
+p2tr_vedge_set_add2 (P2trVEdgeSet *self,
+                    P2trVEdge   *to_flip)
+{
+  if (p2tr_hash_set_contains (self, to_flip))
+    p2tr_vedge_unref (to_flip);
+  else
+    p2tr_hash_set_insert (self, to_flip);
+}
+
+gboolean
+p2tr_vedge_set_pop (P2trVEdgeSet  *self,
+                   P2trVEdge   **value)
+{
+  P2trHashSetIter iter;
+  p2tr_hash_set_iter_init (&iter, self);
+  if (p2tr_hash_set_iter_next (&iter, (gpointer*) value))
+    {
+      p2tr_hash_set_remove (self, *value);
+      return TRUE;
+    }
+  else
+    return FALSE;
+}
+
+void
+p2tr_vedge_set_free (P2trVEdgeSet *self)
+{
+  g_assert (p2tr_hash_set_size (self) == 0);
+  p2tr_hash_set_free (self);
+}
+
+gboolean
+p2tr_vedge_undirected_equals (const P2trVEdge *e1,
+                              const P2trVEdge *e2)
+{
+  return ((e1 == NULL) == (e2 == NULL)) &&
+      (e1 == e2
+      || (e1->start == e2->start && e1->end == e2->end)
+      || (e1->end == e2->start && e1->start == e2->end));
+}
+
+guint
+p2tr_vedge_undirected_hash (const P2trVEdge *edge)
+{
+  return g_direct_hash (edge->start) ^ g_direct_hash (edge->end);
+}

@@ -41,56 +41,9 @@
 #include "utils.h"
 
 /**
- * A set of edges to flip is basically a hash set, with unique equality
- * and hashing function to prevent the same edge from appearing twice
- * in different directions
- */
-typedef P2trHashSet P2trFlipSet;
-
-/**
- * Create a new flip-set - a set of virtual edges that should possibly
- * be flipped to restore the Constrained Delaunay property to a
- * triangulation
-*/
-P2trFlipSet* p2tr_flip_set_new  ();
-
-/**
- * Add the given edge to the flip set. THE EDGE MUST HAVE BEEN REFFED
- * BEFORE THE CALL TO THIS FUNCTION!
- */
-void         p2tr_flip_set_add  (P2trFlipSet *self,
-                                 P2trEdge    *to_flip);
-
-/**
- * Add the given virtual edge to the flip set. THE VIRTUAL EDGE MUST
- * HAVE BEEN REFFED BEFORE THE CALL TO THIS FUNCTION!
- */
-void         p2tr_flip_set_add2 (P2trFlipSet *self,
-                                 P2trVEdge   *to_flip);
-
-/**
- * Try popping a virtual edge from the set. If succeeds, THE RETURNED
- * VIRTUAL EDGE MUST BE UNREFFED!
- */
-gboolean     p2tr_flip_set_pop  (P2trFlipSet  *self,
-                                 P2trVEdge   **value);
-
-/**
- * Free the flip set. IT IS THE REPONSIBILITY OF THE CALLER TO MAKE
- * SURE NO VIRTUAL EDGES WERE LEFT IN THE SET!
- */
-void         p2tr_flip_set_free (P2trFlipSet *self);
-
-/**
  * Flip-Fix all the virtual edges inside the given set
  */
 void         p2tr_cdt_flip_fix  (P2trCDT     *self,
-                                 P2trFlipSet *candidates);
-
-
-gboolean    p2tr_vedge_undirected_equals (const P2trVEdge *e1,
-                                          const P2trVEdge *e2);
-
-guint       p2tr_vedge_undirected_hash   (const P2trVEdge *edge);
+                                 P2trVEdgeSet *candidates);
 
 #endif

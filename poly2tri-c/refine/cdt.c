@@ -80,7 +80,7 @@ p2tr_cdt_new (P2tCDT *cdt)
   GHashTableIter iter;
   P2trPoint *pt_iter = NULL;
 
-  P2trFlipSet *new_edges = p2tr_flip_set_new ();
+  P2trVEdgeSet *new_edges = p2tr_vedge_set_new ();
 
   gint i, j;
 
@@ -132,7 +132,7 @@ p2tr_cdt_new (P2tCDT *cdt)
 
             /* We only wanted to create the edge now. We will use it
              * later */
-            p2tr_flip_set_add (new_edges, edge);
+            p2tr_vedge_set_add (new_edges, edge);
           }
       }
   }
@@ -157,7 +157,7 @@ p2tr_cdt_new (P2tCDT *cdt)
 
   /* And do an extra flip fix */
   p2tr_cdt_flip_fix (rmesh, new_edges);
-  p2tr_flip_set_free (new_edges);
+  p2tr_vedge_set_free (new_edges);
 
   /* Now finally unref the points we added into the map */
   g_hash_table_iter_init (&iter, point_map);
@@ -341,7 +341,7 @@ p2tr_cdt_insert_point_into_triangle (P2trCDT      *self,
                                      P2trPoint    *P,
                                      P2trTriangle *tri)
 {
-  P2trFlipSet *flip_candidates = p2tr_flip_set_new ();
+  P2trVEdgeSet *flip_candidates = p2tr_vedge_set_new ();
 
   P2trPoint *A = tri->edges[0]->end;
   P2trPoint *B = tri->edges[1]->end;
@@ -363,20 +363,20 @@ p2tr_cdt_insert_point_into_triangle (P2trCDT      *self,
   p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh, BC, CP, BP->mirror));
   p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh, CA, AP, CP->mirror));
 
-  p2tr_flip_set_add (flip_candidates, CP);
-  p2tr_flip_set_add (flip_candidates, AP);
-  p2tr_flip_set_add (flip_candidates, BP);
+  p2tr_vedge_set_add (flip_candidates, CP);
+  p2tr_vedge_set_add (flip_candidates, AP);
+  p2tr_vedge_set_add (flip_candidates, BP);
 
-  p2tr_flip_set_add (flip_candidates, p2tr_edge_ref (CA));
-  p2tr_flip_set_add (flip_candidates, p2tr_edge_ref (AB));
-  p2tr_flip_set_add (flip_candidates, p2tr_edge_ref (BC));
+  p2tr_vedge_set_add (flip_candidates, p2tr_edge_ref (CA));
+  p2tr_vedge_set_add (flip_candidates, p2tr_edge_ref (AB));
+  p2tr_vedge_set_add (flip_candidates, p2tr_edge_ref (BC));
 
   /* Flip fix the newly created triangles to preserve the the
    * constrained delaunay property. The flip-fix function will unref the
    * new triangles for us! */
   p2tr_cdt_flip_fix (self, flip_candidates);
 
-  p2tr_flip_set_free (flip_candidates);
+  p2tr_vedge_set_free (flip_candidates);
 }
 
 /**
@@ -385,12 +385,12 @@ p2tr_cdt_insert_point_into_triangle (P2trCDT      *self,
  *    created (these are the two that would have used it)
  * 2. THE RETURNED EDGES MUST BE UNREFFED!
  */
-static P2trFlipSet*
+static P2trVEdgeSet*
 p2tr_cdt_triangulate_fan (P2trCDT   *self,
                           P2trPoint *center,
                           GList     *edge_pts)
 {
-  P2trFlipSet* fan_edges = p2tr_flip_set_new ();
+  P2trVEdgeSet* fan_edges = p2tr_vedge_set_new ();
   GList *iter;
 
   /* We can not triangulate unless at least two points are given */
@@ -415,9 +415,9 @@ p2tr_cdt_triangulate_fan (P2trCDT   *self,
 
       p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh, AB, BC, CA));
 
-      p2tr_flip_set_add (fan_edges, CA);
-      p2tr_flip_set_add (fan_edges, BC);
-      p2tr_flip_set_add (fan_edges, AB);
+      p2tr_vedge_set_add (fan_edges, CA);
+      p2tr_vedge_set_add (fan_edges, BC);
+      p2tr_vedge_set_add (fan_edges, AB);
     }
 
   return fan_edges;
