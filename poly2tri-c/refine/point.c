@@ -107,7 +107,7 @@ void
 _p2tr_point_insert_edge (P2trPoint *self, P2trEdge *e)
 {
   GList *iter = self->outgoing_edges;
-  
+
   /* Remember: Edges are sorted in ASCENDING angle! */
   while (iter != NULL && ((P2trEdge*)iter->data)->angle < e->angle)
     iter = iter->next;
@@ -152,7 +152,7 @@ p2tr_point_edge_ccw (P2trPoint *self,
     p2tr_exception_programmatic ("Could not find the CCW sibling edge"
         "because the edge is not present in the outgoing-edges list!");
 
-  result = (P2trEdge*) g_list_cyclic_next (self->outgoing_edges, node);
+  result = (P2trEdge*) g_list_cyclic_next (self->outgoing_edges, node)->data;
   return p2tr_edge_ref (result);
 }
 
@@ -171,7 +171,7 @@ p2tr_point_edge_cw (P2trPoint* self,
     p2tr_exception_programmatic ("Could not find the CW sibling edge"
         "because the edge is not present in the outgoing-edges list!");
 
-  result = (P2trEdge*) g_list_cyclic_prev (self->outgoing_edges, node);
+  result = (P2trEdge*) g_list_cyclic_prev (self->outgoing_edges, node)->data;
   return p2tr_edge_ref (result);
 }
 
