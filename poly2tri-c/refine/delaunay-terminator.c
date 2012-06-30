@@ -45,6 +45,9 @@
 #include "cdt.h"
 #include "cluster.h"
 
+#include "vedge.h"
+#include "vtriangle.h"
+
 #include "delaunay-terminator.h"
 
 /* The code in this file is based on the "Delaunay Terminator" algorithm
@@ -145,23 +148,23 @@ ChooseSplitVertex(P2trEdge *e, P2trVector2 *dst);
 
 
 static inline gint
-triangle_quality_compare (P2trTriangle *t1, P2trTriangle *t2)
+vtriangle_quality_compare (P2trVTriangle *t1, P2trVTriangle *t2)
 {
   gdouble a1, a2;
-  gboolean r1, r2;
+  P2trTriangle *r1, *r2;
 
-  r1 = p2tr_triangle_is_removed (t1);
-  r2 = p2tr_triangle_is_removed (t2);
+  r1 = p2tr_vtriangle_is_real (t1);
+  r2 = p2tr_vtriangle_is_real (t2);
 
   /* TODO: untill we make sure that removed triangles will get out
    * of Qt, we will make the comparision treat removed triangles as
    * triangles with "less" quality (meaning they are "smaller")
    */
-  if (r1 || r2)
-    return (r1) ? -1 : (r2 ? 1 : 0);
+  if (!r1 || !r2)
+    return (!r1) ? -1 : (!r2 ? 1 : 0);
 
-  a1 = p2tr_triangle_smallest_non_constrained_angle (t1);
-  a2 = p2tr_triangle_smallest_non_constrained_angle (t2);
+  a1 = p2tr_triangle_smallest_non_constrained_angle (r1);
+  a2 = p2tr_triangle_smallest_non_constrained_angle (r2);
   
   return (a1 < a2) ? -1 : ((a1 == a2) ? 0 : 1);
 }
@@ -185,12 +188,12 @@ p2tr_dt_free (P2trDelaunayTerminator *self)
   g_sequence_free (self->Qt);
   g_slice_free (P2trDelaunayTerminator, self);
 }
+
 static void
 p2tr_dt_enqueue_tri (P2trDelaunayTerminator *self,
                      P2trTriangle           *tri)
 {
-  p2tr_triangle_ref (tri);
-  g_sequence_insert_sorted (self->Qt, tri, (GCompareDataFunc)triangle_quality_compare, NULL);
+  g_sequence_insert_sorted (self->Qt, p2tr_vtriangle_new (tri), (GCompareDataFunc)vtriangle_quality_compare, NULL);
 }
 
 static inline gboolean
@@ -199,7 +202,7 @@ p2tr_dt_tri_queue_is_empty (P2trDelaunayTerminator *self)
   return g_sequence_iter_is_end (g_sequence_get_begin_iter (self->Qt));
 }
 
-static P2trTriangle*
+static P2trVTriangle*
 p2tr_dt_dequeue_tri (P2trDelaunayTerminator *self)
 {
   GSequenceIter *first = g_sequence_get_begin_iter (self->Qt);
@@ -209,7 +212,7 @@ p2tr_dt_dequeue_tri (P2trDelaunayTerminator *self)
     return NULL;
   else
     {
-      P2trTriangle *ret = (P2trTriangle*) g_sequence_get (first);
+      P2trVTriangle *ret = (P2trVTriangle*) g_sequence_get (first);
       g_sequence_remove (first);
       return ret;
     }
@@ -222,8 +225,7 @@ p2tr_dt_enqueue_segment (P2trDelaunayTerminator *self,
   if (! E->constrained)
     p2tr_exception_programmatic ("Tried to append a non-segment!");
 
-  p2tr_edge_ref (E);
-  g_queue_push_tail (&self->Qs, E);
+  g_queue_push_tail (&self->Qs, p2tr_edge_ref (E));
 }
 
 static P2trEdge*
@@ -249,6 +251,7 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
   P2trHashSetIter hs_iter;
   P2trEdge *s;
   P2trTriangle *t;
+  P2trVTriangle *vt;
   gint steps = 0;
 
   p2tr_cdt_validate_cdt(self->mesh);
@@ -273,9 +276,17 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
 
   while (! p2tr_dt_tri_queue_is_empty (self))
     {
-      t = p2tr_dt_dequeue_tri (self);
+      vt = p2tr_dt_dequeue_tri (self);
+      t = p2tr_vtriangle_is_real (vt);
 
-      if (steps++ < max_steps && p2tr_hash_set_contains (self->mesh->mesh->triangles, t))
+      if (t)
+        p2tr_triangle_ref (t);
+
+      p2tr_vtriangle_unref (vt);
+
+      if (t && steps++ < max_steps
+          /* TODO: we can probably get rid of this check now */
+          && p2tr_hash_set_contains (self->mesh->mesh->triangles, t))
         {
           P2trCircle tCircum;
           P2trVector2 *c;
@@ -326,8 +337,6 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
           p2tr_hash_set_free (E);
           p2tr_triangle_unref (triContaining_c);
       }
-
-      p2tr_triangle_unref (t);
 
       if (on_progress != NULL) on_progress ((P2trRefiner*) self, steps, max_steps);
     }
