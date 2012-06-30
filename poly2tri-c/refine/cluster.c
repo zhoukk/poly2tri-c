@@ -75,14 +75,11 @@ p2tr_cluster_get_for (P2trPoint   *P,
   g_queue_init (&cluster->edges);
 
   if (P == E->end)
-    {
-      E = p2tr_edge_ref (E->mirror);
-      p2tr_edge_unref (E->mirror);
-    }
+    E = E->mirror;
   else if (P != P2TR_EDGE_START (E))
     p2tr_exception_programmatic ("Unexpected point for the edge!");
 
-  g_queue_push_head (&cluster->edges, E);
+  g_queue_push_head (&cluster->edges, p2tr_edge_ref (E));
 
   current = E;
   next = p2tr_point_edge_cw (P, current);
@@ -91,8 +88,7 @@ p2tr_cluster_get_for (P2trPoint   *P,
       && (temp_angle = p2tr_edge_angle_between (current->mirror, next)) <= P2TR_CLUSTER_LIMIT_ANGLE
       && p2tr_cluster_cw_tri_between_is_in_domain (current, next))
     {
-      g_queue_push_tail (&cluster->edges, next);
-      p2tr_edge_ref (next);
+      g_queue_push_tail (&cluster->edges, p2tr_edge_ref (next));
       current = next;
       next = p2tr_point_edge_cw (P, current);
       cluster->min_angle = MIN (cluster->min_angle, temp_angle);
@@ -104,8 +100,7 @@ p2tr_cluster_get_for (P2trPoint   *P,
       && (temp_angle = p2tr_edge_angle_between (current->mirror, next)) <= P2TR_CLUSTER_LIMIT_ANGLE
       && p2tr_cluster_cw_tri_between_is_in_domain (next, current))
     {
-      g_queue_push_head (&cluster->edges, next);
-      p2tr_edge_ref (next);
+      g_queue_push_head (&cluster->edges, p2tr_edge_ref (next));
       current = next;
       next = p2tr_point_edge_ccw (P, current);
       cluster->min_angle = MIN(cluster->min_angle, temp_angle);

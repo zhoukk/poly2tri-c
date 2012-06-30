@@ -95,7 +95,7 @@ p2tr_cdt_get_segments_encroached_by (P2trCDT     *self,
         && p2tr_hash_set_contains (encroached_edges, e->mirror) == FALSE
         && p2tr_cdt_is_encroached_by (self, e, C))
       {
-        p2tr_hash_set_insert (encroached_edges, e);
+        p2tr_hash_set_insert (encroached_edges, p2tr_edge_ref (e));
       }
 
   return encroached_edges;
