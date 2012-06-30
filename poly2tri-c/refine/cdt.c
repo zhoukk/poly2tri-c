@@ -39,6 +39,7 @@
 
 #include "cdt.h"
 #include "visibility.h"
+#include "cdt-flipfix.h"
 
 static gboolean  p2tr_cdt_visible_from_tri        (P2trCDT      *self,
                                                    P2trTriangle *tri,
@@ -50,18 +51,6 @@ static gboolean  p2tr_cdt_has_empty_circum_circle (P2trCDT      *self,
 static P2trHashSet* p2tr_cdt_triangulate_fan         (P2trCDT   *self,
                                                       P2trPoint *center,
                                                       GList     *edge_pts);
-
-static void         p2tr_cdt_add_edge (P2trHashSet *candidates,
-                                       P2trEdge    *candidate);
-
-static void      p2tr_cdt_flip_fix                (P2trCDT     *self,
-                                                   P2trHashSet *candidates);
-
-static P2trEdge*  p2tr_cdt_try_flip                (P2trCDT   *self,
-                                                    P2trEdge  *to_flip);
-
-static void      p2tr_cdt_on_new_point            (P2trCDT   *self,
-                                                   P2trPoint *pt);
 
 void
 p2tr_cdt_validate_unused (P2trCDT* self)
@@ -90,7 +79,8 @@ p2tr_cdt_new (P2tCDT *cdt)
   P2trCDT *rmesh = g_slice_new (P2trCDT);
   GHashTableIter iter;
   P2trPoint *pt_iter = NULL;
-  P2trHashSet *new_edges = p2tr_hash_set_new_default ();
+
+  P2trFlipSet *new_edges = p2tr_flip_set_new ();
 
   gint i, j;
 
@@ -142,7 +132,7 @@ p2tr_cdt_new (P2tCDT *cdt)
 
             /* We only wanted to create the edge now. We will use it
              * later */
-            p2tr_cdt_add_edge (new_edges, edge);
+            p2tr_flip_set_add (new_edges, edge);
           }
       }
   }
@@ -167,7 +157,7 @@ p2tr_cdt_new (P2tCDT *cdt)
 
   /* And do an extra flip fix */
   p2tr_cdt_flip_fix (rmesh, new_edges);
-  p2tr_hash_set_free (new_edges);
+  p2tr_flip_set_free (new_edges);
 
   /* Now finally unref the points we added into the map */
   g_hash_table_iter_init (&iter, point_map);
@@ -336,8 +326,6 @@ p2tr_cdt_insert_point (P2trCDT           *self,
     /* If we reached this line, then the point is inside the triangle */
     p2tr_cdt_insert_point_into_triangle (self, pt, tri);
 
-  p2tr_cdt_on_new_point (self, pt);
-
   /* We no longer need the triangle */
   p2tr_triangle_unref (tri);
 
@@ -353,7 +341,7 @@ p2tr_cdt_insert_point_into_triangle (P2trCDT      *self,
                                      P2trPoint    *P,
                                      P2trTriangle *tri)
 {
-  P2trHashSet *flip_candidates = p2tr_hash_set_new_default ();
+  P2trFlipSet *flip_candidates = p2tr_flip_set_new ();
 
   P2trPoint *A = tri->edges[0]->end;
   P2trPoint *B = tri->edges[1]->end;
@@ -375,20 +363,20 @@ p2tr_cdt_insert_point_into_triangle (P2trCDT      *self,
   p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh, BC, CP, BP->mirror));
   p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh, CA, AP, CP->mirror));
 
-  p2tr_cdt_add_edge (flip_candidates, CP);
-  p2tr_cdt_add_edge (flip_candidates, AP);
-  p2tr_cdt_add_edge (flip_candidates, BP);
+  p2tr_flip_set_add (flip_candidates, CP);
+  p2tr_flip_set_add (flip_candidates, AP);
+  p2tr_flip_set_add (flip_candidates, BP);
 
-  p2tr_cdt_add_edge (flip_candidates, p2tr_edge_ref (CA));
-  p2tr_cdt_add_edge (flip_candidates, p2tr_edge_ref (AB));
-  p2tr_cdt_add_edge (flip_candidates, p2tr_edge_ref (BC));
+  p2tr_flip_set_add (flip_candidates, p2tr_edge_ref (CA));
+  p2tr_flip_set_add (flip_candidates, p2tr_edge_ref (AB));
+  p2tr_flip_set_add (flip_candidates, p2tr_edge_ref (BC));
 
   /* Flip fix the newly created triangles to preserve the the
    * constrained delaunay property. The flip-fix function will unref the
    * new triangles for us! */
   p2tr_cdt_flip_fix (self, flip_candidates);
 
-  p2tr_hash_set_free (flip_candidates);
+  p2tr_flip_set_free (flip_candidates);
 }
 
 /**
@@ -397,12 +385,12 @@ p2tr_cdt_insert_point_into_triangle (P2trCDT      *self,
  *    created (these are the two that would have used it)
  * 2. THE RETURNED EDGES MUST BE UNREFFED!
  */
-static P2trHashSet*
+static P2trFlipSet*
 p2tr_cdt_triangulate_fan (P2trCDT   *self,
                           P2trPoint *center,
                           GList     *edge_pts)
 {
-  P2trHashSet* fan_edges = p2tr_hash_set_new_default ();
+  P2trFlipSet* fan_edges = p2tr_flip_set_new ();
   GList *iter;
 
   /* We can not triangulate unless at least two points are given */
@@ -427,9 +415,9 @@ p2tr_cdt_triangulate_fan (P2trCDT   *self,
 
       p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh, AB, BC, CA));
 
-      p2tr_cdt_add_edge (fan_edges, CA);
-      p2tr_cdt_add_edge (fan_edges, BC);
-      p2tr_cdt_add_edge (fan_edges, AB);
+      p2tr_flip_set_add (fan_edges, CA);
+      p2tr_flip_set_add (fan_edges, BC);
+      p2tr_flip_set_add (fan_edges, AB);
     }
 
   return fan_edges;
@@ -494,159 +482,8 @@ p2tr_cdt_split_edge (P2trCDT   *self,
       p2tr_edge_unref (CY);
     }
 
-  p2tr_cdt_on_new_point (self, C);
   p2tr_cdt_validate_unused (self);
 
   return new_edges;
-}
-
-/* This function implements "Lawson's algorithm", also known as "The
- * diagonal swapping algorithm". This algorithm takes a CDT, and a list
- * of triangles that were formed by the insertion of a new point into
- * the triangular mesh, and makes the triangulation a CDT once more. Its
- * logic is explained below:
- *
- *   If a point is added to an existing triangular mesh then
- *   circumcircles are formed for all new triangles formed. If any of
- *   the neighbours lie inside the circumcircle of any triangle, then a
- *   quadrilateral is formed using the triangle and its neighbour. The
- *   diagonals of this quadrilateral are swapped to give a new
- *   triangulation. This process is continued till there are no more
- *   faulty triangles and no more swaps are required.
- *
- * The description above is slightly inaccurate, as it does not consider
- * the case were the diagonals can not be swapped since the
- * quadrilateral is concave (then swapping the diagonals would result in
- * a diagonal outside the quad, which is undesired). This code does also
- * handle that case.
- */
-
-#define CDT_180_EPS (1e-4)
-/**
- * Try to flip a given edge, If successfull, return the new edge (reffed!),
- * otherwise return NULL
- */
-static P2trEdge*
-p2tr_cdt_try_flip (P2trCDT   *self,
-                   P2trEdge  *to_flip)
-{
-  /*    C
-   *  / | \
-   * B-----A    to_flip: A->B
-   *  \ | /     to_flip.Tri: ABC
-   *    D
-   */
-  P2trPoint *A, *B, *C, *D;
-  P2trEdge *AB, *CA, *AD, *DB, *BC, *DC;
-
-  g_assert (! to_flip->constrained && ! to_flip->delaunay);
-
-  A = P2TR_EDGE_START (to_flip);
-  B = to_flip->end;
-  C = p2tr_triangle_get_opposite_point (to_flip->tri, to_flip, FALSE);
-  D = p2tr_triangle_get_opposite_point (to_flip->mirror->tri, to_flip->mirror, FALSE);
-
-  AB = to_flip;
-
-  CA = p2tr_point_get_edge_to (C, A, FALSE);
-  AD = p2tr_point_get_edge_to (A, D, FALSE);
-  DB = p2tr_point_get_edge_to (D, B, FALSE);
-  BC = p2tr_point_get_edge_to (B, C, FALSE);
-
-  /* Check if the quadriliteral ADBC is concave (because if it is, we
-   * can't flip the edge) */
-  if (p2tr_triangle_circumcircle_contains_point (AB->tri, &D->c) != P2TR_INCIRCLE_IN)
-    return NULL;
-
-  p2tr_edge_remove (AB);
-
-  DC = p2tr_mesh_new_edge (self->mesh, D, C, FALSE);
-
-  p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh,
-      CA, AD, DC));
-
-  p2tr_triangle_unref (p2tr_mesh_new_triangle (self->mesh,
-      DB, BC, DC->mirror));
-
-  return DC;
-}
-
-static void
-p2tr_cdt_add_edge (P2trHashSet *candidates,
-                   P2trEdge    *candidate)
-{
-  if (p2tr_hash_set_contains (candidates, candidate->mirror) ||
-      p2tr_hash_set_contains (candidates, candidate))
-    p2tr_edge_unref (candidate);
-  else
-    p2tr_hash_set_insert (candidates, candidate);
-}
-
-static void
-p2tr_cdt_flip_fix (P2trCDT     *self,
-                   P2trHashSet *candidates)
-{
-  P2trHashSetIter iter;
-  while (TRUE)
-    {
-      P2trEdge* edge = NULL;
-      p2tr_hash_set_iter_init (&iter, candidates);
-      if (! p2tr_hash_set_iter_next (&iter, (gpointer*)&edge))
-        break;
-
-      p2tr_hash_set_remove (candidates, edge);
-
-      if (! edge->constrained && ! p2tr_edge_is_removed (edge))
-        {
-          /* If the edge is not constrained, then it should be
-           * a part of two triangles */
-          P2trPoint *A  = P2TR_EDGE_START(edge), *B = edge->end;
-          P2trPoint *C1 = p2tr_triangle_get_opposite_point (edge->tri, edge, FALSE);
-          P2trPoint *C2 = p2tr_triangle_get_opposite_point (edge->mirror->tri, edge->mirror, FALSE);
-
-          P2trEdge *flipped = p2tr_cdt_try_flip (self, edge);
-          if (flipped != NULL)
-            {
-              p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (A, C1, TRUE));
-              p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (A, C2, TRUE));
-              p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (B, C1, TRUE));
-              p2tr_cdt_add_edge (candidates, p2tr_point_get_edge_to (B, C2, TRUE));
-              p2tr_edge_unref (flipped);
-            }
-        }
-
-      p2tr_edge_unref (edge);
-    }
-}
-
-/* Whenever a new point was inserted, it may disturb triangles
- * that are extremly skinny and therefor their circumscribing
- * circles are very large and will contain that point, even though they
- * may be very far from that point.
- * We have no choice but to check these and fix them if necessary
- */
-static void
-p2tr_cdt_on_new_point (P2trCDT   *self,
-                       P2trPoint *pt)
-{
-#if FALSE
-  GList *bad_tris = NULL;
-  P2trTriangle *tri;
-  P2trHashSetIter iter;
-
-  p2tr_hash_set_iter_init (&iter, self->mesh->triangles);
-  while (p2tr_hash_set_iter_next (&iter, (gpointer*)&tri))
-    {
-      if (p2tr_triangle_circumcircle_contains_point (tri, &pt->c)
-          != P2TR_INCIRCLE_OUT)
-        {
-          bad_tris = g_list_prepend (bad_tris, tri);
-          p2tr_triangle_ref (tri);
-        }
-    }
-
-  p2tr_cdt_flip_fix (self, bad_tris);
-  g_list_free (bad_tris);
-#endif
 }
 

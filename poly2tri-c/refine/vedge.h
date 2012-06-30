@@ -69,4 +69,16 @@ P2trMesh*   p2tr_vedge_get_mesh  (P2trVEdge *self);
 P2trEdge*   p2tr_vedge_is_real   (P2trVEdge *self);
 
 P2trEdge*   p2tr_vedge_get       (P2trVEdge *self);
+
+/**
+ * Try get a real edge from a virtual edge, and then
+ * unref the virtual edge. IF A MATCHING REAL EDGE IS
+ * RETURNED, IT MUST BE UNREFFED BY THE CALLER!
+ * @param self The virtual edge to test
+ * @param real The place to store the matching real edge
+ * @return TRUE if a real edge was returned, FALSE if no
+ *         matching edge exists.
+ */
+gboolean    p2tr_vedge_try_get_and_unref (P2trVEdge  *self,
+                                          P2trEdge  **real);
 #endif

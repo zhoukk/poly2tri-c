@@ -85,7 +85,7 @@ p2tr_vedge_unref (P2trVEdge *self)
 }
 
 P2trEdge*
-p2tr_edge_is_real (P2trVEdge *self)
+p2tr_vedge_is_real (P2trVEdge *self)
 {
   return p2tr_point_has_edge_to (self->start, self->end);
 }
@@ -108,4 +108,15 @@ P2trEdge*
 p2tr_vedge_get (P2trVEdge *self)
 {
   return p2tr_point_get_edge_to (self->start, self->end, TRUE);
+}
+
+gboolean
+p2tr_vedge_try_get_and_unref (P2trVEdge  *self,
+                              P2trEdge  **real)
+{
+  P2trEdge *real_one = p2tr_vedge_is_real (self);
+  if (real_one)
+    p2tr_edge_ref (real_one);
+  p2tr_vedge_unref (self);
+  return (*real = real_one) != NULL;
 }
