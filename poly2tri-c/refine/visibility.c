@@ -136,7 +136,7 @@ find_point_in_polygon (P2trPSLG    *polygon,
     P2trPSLGIter iter;
     const P2trBoundedLine *line = NULL;
 
-    g_assert (p2tr_pslg_size (polygon) > 1);
+    g_assert (p2tr_pslg_size (polygon) >= 1);
 
     p2tr_pslg_iter_init (&iter, polygon);
     p2tr_pslg_iter_next (&iter, &line);
