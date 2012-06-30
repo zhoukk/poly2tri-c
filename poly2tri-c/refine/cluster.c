@@ -75,7 +75,10 @@ p2tr_cluster_get_for (P2trPoint   *P,
   g_queue_init (&cluster->edges);
 
   if (P == E->end)
-    P = P2TR_EDGE_START (E);
+    {
+      E = p2tr_edge_ref (E->mirror);
+      p2tr_edge_unref (E->mirror);
+    }
   else if (P != P2TR_EDGE_START (E))
     p2tr_exception_programmatic ("Unexpected point for the edge!");
 
