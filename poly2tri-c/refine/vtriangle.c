@@ -30,28 +30,81 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __P2TC_REFINE_H__
-#define __P2TC_REFINE_H__
-
-#include "utils.h"
-#include "rmath.h"
-
-#include "vector2.h"
-#include "circle.h"
-#include "line.h"
-#include "bounded-line.h"
-#include "pslg.h"
+#include <glib.h>
 
 #include "point.h"
 #include "edge.h"
 #include "triangle.h"
 #include "mesh.h"
 
-#include "vedge.h"
 #include "vtriangle.h"
 
-#include "cluster.h"
-#include "cdt.h"
-#include "refiner.h"
+P2trVTriangle*
+p2tr_vtriangle_new (P2trTriangle *tri)
+{
+  P2trVTriangle *self = g_slice_new (P2trVTriangle);
 
-#endif
+  self->points[0] = p2tr_point_ref (tri->edges[0]->end);
+  self->points[1] = p2tr_point_ref (tri->edges[1]->end);
+  self->points[2] = p2tr_point_ref (tri->edges[2]->end);
+
+  self->refcount = 1;
+
+  return self;
+}
+
+P2trVTriangle*
+p2tr_vtriangle_ref (P2trVTriangle *self)
+{
+  ++self->refcount;
+  return self;
+}
+
+void
+p2tr_vtriangle_unref (P2trVTriangle *self)
+{
+  g_assert (self->refcount > 0);
+  if (--self->refcount == 0)
+    p2tr_vtriangle_free (self);
+}
+
+void
+p2tr_vtriangle_free (P2trVTriangle *self)
+{
+  p2tr_point_unref (self->points[0]);
+  p2tr_point_unref (self->points[1]);
+  p2tr_point_unref (self->points[2]);
+  g_slice_free (P2trVTriangle, self);
+}
+
+P2trMesh*
+p2tr_vtriangle_get_mesh (P2trVTriangle *self)
+{
+  return p2tr_point_get_mesh (self->points[0]);
+}
+
+P2trTriangle*
+p2tr_vtriangle_is_real (P2trVTriangle *self)
+{
+  P2trEdge *e0, *e1, *e2;
+
+  /* The triangle exists if and only if all the edges
+   * still exist and they all are a part of the same
+   * triangle. */
+  if ((e0 = p2tr_point_has_edge_to (self->points[0], self->points[1])) &&
+      (e1 = p2tr_point_has_edge_to (self->points[1], self->points[2])) &&
+      (e2 = p2tr_point_has_edge_to (self->points[2], self->points[0])) &&
+      e0->tri == e1->tri && e1->tri == e2->tri)
+    return e0->tri;
+  else
+    return NULL;
+}
+
+P2trTriangle*
+p2tr_vtriangle_get (P2trVTriangle *self)
+{
+  P2trTriangle *real = p2tr_vtriangle_is_real (self);
+  g_assert (real != NULL);
+  return p2tr_triangle_ref (real);
+}
+

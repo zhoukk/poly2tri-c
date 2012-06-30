@@ -30,14 +30,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __P2TC_REFINE_TRIANGULATION_H__
-#define __P2TC_REFINE_TRIANGULATION_H__
+#ifndef __P2TC_REFINE_VTRIANGLE_H__
+#define __P2TC_REFINE_VTRIANGLE_H__
 
-typedef struct P2trPoint_     P2trPoint;
-typedef struct P2trEdge_      P2trEdge;
-typedef struct P2trTriangle_  P2trTriangle;
-typedef struct P2trMesh_      P2trMesh;
+#include <glib.h>
+#include "rmath.h"
+#include "triangulation.h"
 
-typedef struct P2trVEdge_     P2trVEdge;
-typedef struct P2trVTriangle_ P2trVTriangle;
+/**
+ * @struct P2trVTriangle_
+ * A struct for representing a potential ("virtual") triangle
+ * in a triangular mesh
+ */
+struct P2trVTriangle_
+{
+  P2trPoint* points[3];
+  
+  guint refcount;
+};
+
+P2trVTriangle*   p2tr_vtriangle_new          (P2trTriangle  *tri);
+
+P2trVTriangle*   p2tr_vtriangle_ref          (P2trVTriangle *self);
+
+void             p2tr_vtriangle_unref        (P2trVTriangle *self);
+
+void             p2tr_vtriangle_free         (P2trVTriangle *self);
+
+P2trMesh*        p2tr_vtriangle_get_mesh     (P2trVTriangle *self);
+
+P2trTriangle*    p2tr_vtriangle_is_real      (P2trVTriangle *self);
+
+P2trTriangle*    p2tr_vtriangle_get          (P2trVTriangle *self);
+
 #endif
