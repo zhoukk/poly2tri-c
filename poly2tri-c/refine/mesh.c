@@ -37,6 +37,7 @@
 #include "point.h"
 #include "edge.h"
 #include "triangle.h"
+#include "mesh-action.h"
 
 P2trMesh*
 p2tr_mesh_new (void)
@@ -47,6 +48,9 @@ p2tr_mesh_new (void)
   mesh->edges = p2tr_hash_set_new_default ();
   mesh->points = p2tr_hash_set_new_default ();
   mesh->triangles = p2tr_hash_set_new_default ();
+
+  mesh->record_undo = FALSE;
+  g_queue_init (&mesh->undo);
 
   return mesh;
 }
@@ -59,6 +63,10 @@ p2tr_mesh_add_point (P2trMesh  *self,
   point->mesh = self;
   p2tr_mesh_ref (self);
   p2tr_hash_set_insert (self->points, point);
+
+  if (self->record_undo)
+    g_queue_push_tail (&self->undo, p2tr_mesh_action_new_point (point));
+
   return p2tr_point_ref (point);
 }
 
@@ -84,6 +92,10 @@ p2tr_mesh_add_edge (P2trMesh *self,
   g_assert (p2tr_edge_get_mesh (edge) == NULL);
   p2tr_hash_set_insert (self->edges, p2tr_edge_ref (edge->mirror));
   p2tr_hash_set_insert (self->edges, p2tr_edge_ref (edge));
+
+  if (self->record_undo)
+    g_queue_push_tail (&self->undo, p2tr_mesh_action_new_edge (edge));
+
   return edge;
 }
 
@@ -116,6 +128,10 @@ p2tr_mesh_add_triangle (P2trMesh     *self,
 {
   g_assert (p2tr_triangle_get_mesh (tri) == NULL);
   p2tr_hash_set_insert (self->triangles, tri);
+
+  if (self->record_undo)
+    g_queue_push_tail (&self->undo, p2tr_mesh_action_new_triangle (tri));
+
   return p2tr_triangle_ref (tri);
 }
 
@@ -139,6 +155,10 @@ p2tr_mesh_on_point_removed (P2trMesh  *self,
   p2tr_mesh_unref (self);
 
   p2tr_hash_set_remove (self->points, point);
+
+  if (self->record_undo)
+    g_queue_push_tail (&self->undo, p2tr_mesh_action_del_point (point));
+
   p2tr_point_unref (point);
 }
 
@@ -146,7 +166,13 @@ void
 p2tr_mesh_on_edge_removed (P2trMesh *self,
                            P2trEdge *edge)
 {
+  p2tr_hash_set_remove (self->edges, edge->mirror);
+  p2tr_edge_unref (edge->mirror);
   p2tr_hash_set_remove (self->edges, edge);
+
+  if (self->record_undo)
+    g_queue_push_tail (&self->undo, p2tr_mesh_action_del_edge (edge));
+
   p2tr_edge_unref (edge);
 }
 
@@ -155,7 +181,49 @@ p2tr_mesh_on_triangle_removed (P2trMesh     *self,
                                P2trTriangle *triangle)
 {
   p2tr_hash_set_remove (self->triangles, triangle);
+
+  if (self->record_undo)
+    g_queue_push_tail (&self->undo, p2tr_mesh_action_del_triangle (triangle));
+
   p2tr_triangle_unref (triangle);
+}
+
+void
+p2tr_mesh_action_group_begin (P2trMesh *self)
+{
+  g_assert (! self->record_undo);
+  self->record_undo = TRUE;
+}
+
+void
+p2tr_mesh_action_group_commit (P2trMesh *self)
+{
+  GList *iter;
+
+  g_assert (self->record_undo);
+
+  for (iter = self->undo.head; iter != NULL; iter = iter->next)
+    p2tr_mesh_action_unref ((P2trMeshAction*)iter->data);
+  g_queue_clear (&self->undo);
+
+  self->record_undo = FALSE;
+}
+
+void
+p2tr_mesh_action_group_undo (P2trMesh *self)
+{
+  GList *iter;
+
+  g_assert (self->record_undo);
+
+  for (iter = self->undo.tail; iter != NULL; iter = iter->prev)
+    {
+      p2tr_mesh_action_undo ((P2trMeshAction*)iter->data, self);
+      p2tr_mesh_action_unref ((P2trMeshAction*)iter->data);
+    }
+  g_queue_clear (&self->undo);
+
+  self->record_undo = FALSE;
 }
 
 void
@@ -195,6 +263,9 @@ p2tr_mesh_clear (P2trMesh *self)
 void
 p2tr_mesh_free (P2trMesh *self)
 {
+  if (self->record_undo)
+    p2tr_mesh_action_group_commit (self);
+
   p2tr_mesh_clear (self);
 
   p2tr_hash_set_free (self->points);

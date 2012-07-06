@@ -43,6 +43,9 @@ struct P2trMesh_
   P2trHashSet *triangles;
   P2trHashSet *edges;
   P2trHashSet *points;
+
+  gboolean     record_undo;
+  GQueue       undo;
   
   guint        refcount;
 };
@@ -112,6 +115,10 @@ void          p2tr_mesh_on_edge_removed     (P2trMesh *mesh,
 
 void          p2tr_mesh_on_triangle_removed (P2trMesh     *mesh,
                                              P2trTriangle *triangle);
+
+void          p2tr_mesh_action_group_begin    (P2trMesh *self);
+void          p2tr_mesh_action_group_commit   (P2trMesh *self);
+void          p2tr_mesh_action_group_undo     (P2trMesh *self);
 
 void          p2tr_mesh_clear           (P2trMesh *mesh);
 

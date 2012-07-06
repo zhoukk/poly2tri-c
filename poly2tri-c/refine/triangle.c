@@ -157,6 +157,12 @@ p2tr_triangle_remove (P2trTriangle *self)
 
   mesh = p2tr_triangle_get_mesh (self);
   
+  if (mesh != NULL)
+    {
+      p2tr_mesh_on_triangle_removed (mesh, self);
+      p2tr_mesh_unref (mesh); /* The get function reffed it */
+    }
+
   for (i = 0; i < 3; i++)
   {
     self->edges[i]->tri = NULL;
@@ -165,12 +171,6 @@ p2tr_triangle_remove (P2trTriangle *self)
     p2tr_edge_unref (self->edges[i]);
     self->edges[i] = NULL;
   }
-
-  if (mesh != NULL)
-    {
-      p2tr_mesh_on_triangle_removed (mesh, self);
-      p2tr_mesh_unref (mesh); /* The get function reffed it */
-    }
 }
 
 P2trMesh*
