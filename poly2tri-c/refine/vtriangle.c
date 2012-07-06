@@ -100,6 +100,41 @@ p2tr_vtriangle_is_real (P2trVTriangle *self)
     return NULL;
 }
 
+void
+p2tr_vtriangle_create (P2trVTriangle *self)
+{
+  P2trMesh     *mesh;
+  P2trEdge     *e1, *e2, *e3;
+  P2trTriangle *tri;
+
+  g_assert (! p2tr_vtriangle_is_real (self));
+
+  mesh = p2tr_vtriangle_get_mesh (self);
+  e1 = p2tr_point_get_edge_to (self->points[0], self->points[1], FALSE);
+  e2 = p2tr_point_get_edge_to (self->points[1], self->points[2], FALSE);
+  e3 = p2tr_point_get_edge_to (self->points[2], self->points[0], FALSE);
+
+  if (mesh != NULL)
+    {
+      tri = p2tr_mesh_new_triangle (mesh, e1, e2, e3);
+      p2tr_mesh_unref (mesh);
+    }
+  else
+    tri = p2tr_triangle_new (e1, e2, e3);
+
+  p2tr_triangle_unref (tri);
+}
+
+void
+p2tr_vtriangle_remove (P2trVTriangle *self)
+{
+  P2trTriangle *tri = p2tr_vtriangle_is_real (self);
+
+  g_assert (tri != NULL);
+
+  p2tr_triangle_remove (tri);
+}
+
 P2trTriangle*
 p2tr_vtriangle_get (P2trVTriangle *self)
 {

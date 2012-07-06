@@ -61,6 +61,10 @@ P2trMesh*        p2tr_vtriangle_get_mesh     (P2trVTriangle *self);
 
 P2trTriangle*    p2tr_vtriangle_is_real      (P2trVTriangle *self);
 
+void             p2tr_vtriangle_create       (P2trVTriangle *self);
+
+void             p2tr_vtriangle_remove       (P2trVTriangle *self);
+
 P2trTriangle*    p2tr_vtriangle_get          (P2trVTriangle *self);
 
 #endif

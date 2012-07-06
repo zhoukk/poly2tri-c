@@ -41,20 +41,23 @@
 static void
 p2tr_vedge_init (P2trVEdge *self,
                  P2trPoint *start,
-                 P2trPoint *end)
+                 P2trPoint *end,
+                 gboolean   constrained)
 {
-  self->start    = start;
-  self->end      = end;
-  self->refcount = 0;
+  self->start       = start;
+  self->end         = end;
+  self->constrained = constrained;
+  self->refcount    = 0;
 }
 
 P2trVEdge*
 p2tr_vedge_new (P2trPoint *start,
-                P2trPoint *end)
+                P2trPoint *end,
+                gboolean   constrained)
 {
-  P2trVEdge *self   = g_slice_new (P2trVEdge);
+  P2trVEdge *self = g_slice_new (P2trVEdge);
 
-  p2tr_vedge_init (self, start, end);
+  p2tr_vedge_init (self, start, end, constrained);
 
   p2tr_point_ref (start);
   p2tr_point_ref (end);
@@ -64,9 +67,10 @@ p2tr_vedge_new (P2trPoint *start,
 }
 
 P2trVEdge*
-p2tr_vedge_new2 (P2trEdge  *real)
+p2tr_vedge_new2 (P2trEdge *real)
 {
-  return p2tr_vedge_new (P2TR_EDGE_START (real), real->end);
+  return p2tr_vedge_new (P2TR_EDGE_START (real), real->end,
+      real->constrained);
 }
 
 P2trVEdge*
@@ -88,6 +92,36 @@ P2trEdge*
 p2tr_vedge_is_real (P2trVEdge *self)
 {
   return p2tr_point_has_edge_to (self->start, self->end);
+}
+
+void
+p2tr_vedge_create (P2trVEdge *self)
+{
+  P2trMesh *mesh;
+  P2trEdge *edge;
+
+  g_assert (! p2tr_vedge_is_real (self));
+
+  mesh = p2tr_vedge_get_mesh (self);
+  if (mesh != NULL)
+    {
+      edge = p2tr_mesh_new_edge (mesh, self->start, self->end, self->constrained);
+      p2tr_mesh_unref (mesh);
+    }
+  else
+    edge = p2tr_edge_new (self->start, self->end, self->constrained);
+
+  p2tr_edge_unref (edge);
+}
+
+void
+p2tr_vedge_remove (P2trVEdge *self)
+{
+  P2trEdge *edge = p2tr_vedge_is_real (self);
+
+  g_assert (edge != NULL);
+
+  p2tr_edge_remove (edge);
 }
 
 void

@@ -94,10 +94,10 @@ p2tr_cdt_flip_fix (P2trCDT     *self,
           P2trEdge *flipped = p2tr_cdt_try_flip (self, edge);
           if (flipped != NULL)
             {
-              p2tr_vedge_set_add2 (candidates, p2tr_vedge_new (A, C1));
-              p2tr_vedge_set_add2 (candidates, p2tr_vedge_new (A, C2));
-              p2tr_vedge_set_add2 (candidates, p2tr_vedge_new (B, C1));
-              p2tr_vedge_set_add2 (candidates, p2tr_vedge_new (B, C2));
+              p2tr_vedge_set_add (candidates, p2tr_point_get_edge_to (A, C1, TRUE));
+              p2tr_vedge_set_add (candidates, p2tr_point_get_edge_to (A, C2, TRUE));
+              p2tr_vedge_set_add (candidates, p2tr_point_get_edge_to (B, C1, TRUE));
+              p2tr_vedge_set_add (candidates, p2tr_point_get_edge_to (B, C2, TRUE));
               p2tr_edge_unref (flipped);
             }
         }

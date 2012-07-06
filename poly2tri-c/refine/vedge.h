@@ -48,13 +48,15 @@ struct P2trVEdge_
   P2trPoint *start;
   /** The end point of this virtual edge */
   P2trPoint *end;
-
+  /** A flag to make whether this is a constrained edge */
+  gboolean   constrained;
   /** A count of references to the virtual edge */
-  guint         refcount;
+  guint      refcount;
 };
 
 P2trVEdge*  p2tr_vedge_new       (P2trPoint *start,
-                                  P2trPoint *end);
+                                  P2trPoint *end,
+                                  gboolean   constrained);
 
 P2trVEdge*  p2tr_vedge_new2      (P2trEdge  *real);
 
@@ -67,6 +69,10 @@ void        p2tr_vedge_free      (P2trVEdge *self);
 P2trMesh*   p2tr_vedge_get_mesh  (P2trVEdge *self);
 
 P2trEdge*   p2tr_vedge_is_real   (P2trVEdge *self);
+
+void        p2tr_vedge_create    (P2trVEdge *self);
+
+void        p2tr_vedge_remove    (P2trVEdge *self);
 
 P2trEdge*   p2tr_vedge_get       (P2trVEdge *self);
 
@@ -100,28 +106,28 @@ P2trVEdgeSet* p2tr_vedge_set_new  ();
  * Add the given edge to the flip set. THE EDGE MUST HAVE BEEN REFFED
  * BEFORE THE CALL TO THIS FUNCTION!
  */
-void         p2tr_vedge_set_add  (P2trVEdgeSet *self,
-                                 P2trEdge    *to_flip);
+void         p2tr_vedge_set_add  (P2trVEdgeSet  *self,
+                                  P2trEdge      *to_flip);
 
 /**
  * Add the given virtual edge to the flip set. THE VIRTUAL EDGE MUST
  * HAVE BEEN REFFED BEFORE THE CALL TO THIS FUNCTION!
  */
-void         p2tr_vedge_set_add2 (P2trVEdgeSet *self,
-                                 P2trVEdge   *to_flip);
+void         p2tr_vedge_set_add2 (P2trVEdgeSet  *self,
+                                  P2trVEdge     *to_flip);
 
 /**
  * Try popping a virtual edge from the set. If succeeds, THE RETURNED
  * VIRTUAL EDGE MUST BE UNREFFED!
  */
 gboolean     p2tr_vedge_set_pop  (P2trVEdgeSet  *self,
-                                 P2trVEdge   **value);
+                                  P2trVEdge    **value);
 
 /**
  * Free the flip set. IT IS THE REPONSIBILITY OF THE CALLER TO MAKE
  * SURE NO VIRTUAL EDGES WERE LEFT IN THE SET!
  */
-void         p2tr_vedge_set_free (P2trVEdgeSet *self);
+void         p2tr_vedge_set_free (P2trVEdgeSet  *self);
 
 gboolean     p2tr_vedge_undirected_equals (const P2trVEdge *e1,
                                            const P2trVEdge *e2);
