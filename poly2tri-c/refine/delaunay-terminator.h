@@ -36,6 +36,7 @@
 #include <glib.h>
 #include "cdt.h"
 #include "refiner.h"
+#include "vedge.h"
 
 typedef struct
 {
@@ -53,8 +54,8 @@ gboolean  p2tr_cdt_is_encroached_by (P2trCDT     *self,
                                      P2trEdge    *e,
                                      P2trVector2 *p);
 
-P2trHashSet*  p2tr_cdt_get_segments_encroached_by (P2trCDT     *self,
-                                                   P2trVector2 *C);
+P2trVEdgeSet*  p2tr_cdt_get_segments_encroached_by (P2trCDT   *self,
+                                                    P2trPoint *v);
 
 gboolean      p2tr_cdt_is_encroached (P2trEdge *E);
 

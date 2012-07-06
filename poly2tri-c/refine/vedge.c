@@ -198,6 +198,12 @@ p2tr_vedge_set_pop (P2trVEdgeSet  *self,
     return FALSE;
 }
 
+guint
+p2tr_vedge_set_size (P2trVEdgeSet *self)
+{
+  return p2tr_hash_set_size (self);
+}
+
 void
 p2tr_vedge_set_free (P2trVEdgeSet *self)
 {

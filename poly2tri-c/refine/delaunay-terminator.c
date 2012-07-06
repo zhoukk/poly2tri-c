@@ -82,26 +82,32 @@ p2tr_cdt_is_encroached_by (P2trCDT     *self,
 }
 
 
-P2trHashSet*
-p2tr_cdt_get_segments_encroached_by (P2trCDT     *self,
-                                     P2trVector2 *C)
+P2trVEdgeSet*
+p2tr_cdt_get_segments_encroached_by (P2trCDT   *self,
+                                     P2trPoint *v)
 {
-  P2trHashSet *encroached_edges = p2tr_hash_set_new (g_direct_hash,
-      g_direct_equal, (GDestroyNotify) p2tr_edge_unref);
+  P2trVEdgeSet *encroached = p2tr_vedge_set_new ();
+  GList *iter;
 
-  P2trHashSetIter iter;
-  P2trEdge *e;
-  
-  p2tr_hash_set_iter_init (&iter, self->mesh->edges);
-  while (p2tr_hash_set_iter_next (&iter, (gpointer*)&e))
-    if (e->constrained
-        && p2tr_hash_set_contains (encroached_edges, e->mirror) == FALSE
-        && p2tr_cdt_is_encroached_by (self, e, C))
-      {
-        p2tr_hash_set_insert (encroached_edges, p2tr_edge_ref (e));
-      }
+  for (iter = v->outgoing_edges; iter != NULL; iter = iter->next)
+    {
+      P2trEdge *outEdge = (P2trEdge*) iter->data;
+      P2trTriangle *t = outEdge->tri;
+      P2trEdge *e;
 
-  return encroached_edges;
+      if (t == NULL)
+          continue;
+
+      e = p2tr_triangle_get_opposite_edge (t, v);
+
+      /* we want the fast check and for new points we don't
+       * use that check... So let's go on the full check
+       * since it's still faster */
+      if (e->constrained && p2tr_cdt_is_encroached (e))
+        p2tr_vedge_set_add2 (encroached, p2tr_vedge_new2 (e));
+    }
+
+  return encroached;
 }
 
 gboolean
@@ -291,7 +297,8 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
           P2trCircle tCircum;
           P2trVector2 *c;
           P2trTriangle *triContaining_c;
-          P2trHashSet *E;
+          P2trVEdgeSet *E;
+          P2trPoint *cPoint;
 
           p2tr_cdt_validate_cdt (self->mesh);
           p2tr_triangle_get_circum_circle (t, &tCircum);
@@ -309,19 +316,24 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
 
           /* Now, check if this point would encroach any edge
            * of the triangulation */
-          E = p2tr_cdt_get_segments_encroached_by (self->mesh, c);
+          p2tr_mesh_action_group_begin (self->mesh->mesh);
 
-          if (p2tr_hash_set_size (E) == 0)
+          cPoint = p2tr_cdt_insert_point (self->mesh, c, triContaining_c);
+          E = p2tr_cdt_get_segments_encroached_by (self->mesh, cPoint);
+
+          if (p2tr_vedge_set_size (E) == 0)
             {
-              P2trPoint *cPoint;
-              cPoint = p2tr_cdt_insert_point (self->mesh, c, triContaining_c);
+              p2tr_mesh_action_group_commit (self->mesh->mesh);
               NewVertex (self, cPoint, self->theta, self->delta);
-              
               p2tr_point_unref (cPoint);
             }
           else
             {
-              gdouble d = ShortestEdgeLength(t);
+              gdouble d;
+
+              p2tr_mesh_action_group_undo (self->mesh->mesh);
+
+              d = ShortestEdgeLength(t);
               
               p2tr_hash_set_iter_init (&hs_iter, E);
               while (p2tr_hash_set_iter_next (&hs_iter, (gpointer*)&s))
@@ -334,7 +346,9 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
                   SplitEncroachedSubsegments(self, self->theta, self->delta);
                 }
             }
-          p2tr_hash_set_free (E);
+
+          p2tr_vedge_set_free (E);
+          p2tr_point_unref (cPoint);
           p2tr_triangle_unref (triContaining_c);
       }
 

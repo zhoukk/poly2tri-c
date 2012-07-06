@@ -124,6 +124,11 @@ gboolean     p2tr_vedge_set_pop  (P2trVEdgeSet  *self,
                                   P2trVEdge    **value);
 
 /**
+ * Returns the amount of virtual edges currently in the set
+ */
+guint        p2tr_vedge_set_size (P2trVEdgeSet  *self);
+
+/**
  * Free the flip set. IT IS THE REPONSIBILITY OF THE CALLER TO MAKE
  * SURE NO VIRTUAL EDGES WERE LEFT IN THE SET!
  */
