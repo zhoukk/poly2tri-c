@@ -89,7 +89,6 @@ P2trEdge*
 p2tr_mesh_add_edge (P2trMesh *self,
                     P2trEdge *edge)
 {
-  g_assert (p2tr_edge_get_mesh (edge) == NULL);
   p2tr_hash_set_insert (self->edges, p2tr_edge_ref (edge->mirror));
   p2tr_hash_set_insert (self->edges, p2tr_edge_ref (edge));
 
@@ -126,7 +125,6 @@ P2trTriangle*
 p2tr_mesh_add_triangle (P2trMesh     *self,
                         P2trTriangle *tri)
 {
-  g_assert (p2tr_triangle_get_mesh (tri) == NULL);
   p2tr_hash_set_insert (self->triangles, tri);
 
   if (self->record_undo)
