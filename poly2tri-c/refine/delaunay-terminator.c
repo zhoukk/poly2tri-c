@@ -285,14 +285,7 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
       vt = p2tr_dt_dequeue_tri (self);
       t = p2tr_vtriangle_is_real (vt);
 
-      if (t)
-        p2tr_triangle_ref (t);
-
-      p2tr_vtriangle_unref (vt);
-
-      if (t && steps++ < max_steps
-          /* TODO: we can probably get rid of this check now */
-          && p2tr_hash_set_contains (self->mesh->mesh->triangles, t))
+      if (t && steps++ < max_steps)
         {
           P2trCircle tCircum;
           P2trVector2 *c;
@@ -310,9 +303,9 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
            * inside the triangulation domain!!! */
           if (triContaining_c == NULL)
             p2tr_exception_geometric ("Should not happen! (%f, %f) (Center of (%f,%f)->(%f,%f)->(%f,%f)) is outside the domain!", c->x, c->y,
-            t->edges[2]->end->c.x, t->edges[2]->end->c.y,
-            t->edges[0]->end->c.x, t->edges[0]->end->c.y,
-            t->edges[1]->end->c.x, t->edges[1]->end->c.y);
+            vt->points[0]->c.x, vt->points[0]->c.y,
+            vt->points[1]->c.x, vt->points[1]->c.y,
+            vt->points[2]->c.x, vt->points[2]->c.y);
 
           /* Now, check if this point would encroach any edge
            * of the triangulation */
@@ -325,20 +318,30 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
             {
               p2tr_mesh_action_group_commit (self->mesh->mesh);
               NewVertex (self, cPoint, self->theta, self->delta);
-              p2tr_point_unref (cPoint);
             }
           else
             {
+              P2trVEdge *vSegment;
               gdouble d;
 
               p2tr_mesh_action_group_undo (self->mesh->mesh);
+              /* The (reverted) changes to the mesh may have eliminated the
+               * original triangle t. We must restore it manually from
+               * the virtual triangle
+               */
+              t = p2tr_vtriangle_is_real (vt);
+              g_assert (t != NULL);
 
-              d = ShortestEdgeLength(t);
-              
-              p2tr_hash_set_iter_init (&hs_iter, E);
-              while (p2tr_hash_set_iter_next (&hs_iter, (gpointer*)&s))
-                if (self->delta (t) || SplitPermitted(self, s, d))
-                  p2tr_dt_enqueue_segment (self, s);
+              d = ShortestEdgeLength (t);
+
+              while (p2tr_vedge_set_pop (E, &vSegment))
+                {
+                  s = p2tr_vedge_get (vSegment);
+                  if (self->delta (t) || SplitPermitted(self, s, d))
+                    p2tr_dt_enqueue_segment (self, s);
+                  p2tr_edge_unref (s);
+                  p2tr_vedge_unref (vSegment);
+                }
 
               if (! p2tr_dt_segment_queue_is_empty (self))
                 {
@@ -351,6 +354,8 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
           p2tr_point_unref (cPoint);
           p2tr_triangle_unref (triContaining_c);
       }
+
+      p2tr_vtriangle_unref (vt);
 
       if (on_progress != NULL) on_progress ((P2trRefiner*) self, steps, max_steps);
     }
