@@ -52,6 +52,17 @@ p2tr_mesh_new (void)
 }
 
 P2trPoint*
+p2tr_mesh_add_point (P2trMesh  *self,
+                     P2trPoint *point)
+{
+  g_assert (point->mesh == NULL);
+  point->mesh = self;
+  p2tr_mesh_ref (self);
+  p2tr_hash_set_insert (self->points, point);
+  return p2tr_point_ref (point);
+}
+
+P2trPoint*
 p2tr_mesh_new_point (P2trMesh          *self,
                      const P2trVector2 *c)
 {
@@ -63,15 +74,17 @@ p2tr_mesh_new_point2 (P2trMesh *self,
                       gdouble   x,
                       gdouble   y)
 {
-  P2trPoint *pt = p2tr_point_new2 (x, y);
+  return p2tr_mesh_add_point (self, p2tr_point_new2 (x, y));
+}
 
-  pt->mesh = self;
-  p2tr_mesh_ref (self);
-
-  p2tr_hash_set_insert (self->points, pt);
-  p2tr_point_ref (pt);
-
-  return pt;
+P2trEdge*
+p2tr_mesh_add_edge (P2trMesh *self,
+                    P2trEdge *edge)
+{
+  g_assert (p2tr_edge_get_mesh (edge) == NULL);
+  p2tr_hash_set_insert (self->edges, p2tr_edge_ref (edge->mirror));
+  p2tr_hash_set_insert (self->edges, p2tr_edge_ref (edge));
+  return edge;
 }
 
 P2trEdge*
@@ -80,14 +93,7 @@ p2tr_mesh_new_edge (P2trMesh  *self,
                     P2trPoint *end,
                     gboolean   constrained)
 {
-  P2trEdge *ed = p2tr_edge_new (start, end, constrained);
-
-  p2tr_hash_set_insert (self->edges, ed);
-  p2tr_edge_ref (ed);
-  p2tr_hash_set_insert (self->edges, ed->mirror);
-  p2tr_edge_ref (ed->mirror);
-
-  return ed;
+  return p2tr_mesh_add_edge (self, p2tr_edge_new (start, end, constrained));
 }
 
 P2trEdge*
@@ -105,16 +111,21 @@ p2tr_mesh_new_or_existing_edge (P2trMesh  *self,
 }
 
 P2trTriangle*
+p2tr_mesh_add_triangle (P2trMesh     *self,
+                        P2trTriangle *tri)
+{
+  g_assert (p2tr_triangle_get_mesh (tri) == NULL);
+  p2tr_hash_set_insert (self->triangles, tri);
+  return p2tr_triangle_ref (tri);
+}
+
+P2trTriangle*
 p2tr_mesh_new_triangle (P2trMesh *self,
                         P2trEdge *AB,
                         P2trEdge *BC,
                         P2trEdge *CA)
 {
-  P2trTriangle *tr = p2tr_triangle_new (AB, BC, CA);
-
-  p2tr_hash_set_insert (self->triangles, tr);
-  p2tr_triangle_ref (tr);
-  return tr;
+  return p2tr_mesh_add_triangle (self, p2tr_triangle_new (AB, BC, CA));
 }
 
 void

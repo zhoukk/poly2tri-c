@@ -49,12 +49,30 @@ struct P2trMesh_
 
 P2trMesh*     p2tr_mesh_new             (void);
 
+/**
+ * Add an existing point to the given mesh
+ * @param self The mesh to add the point to
+ * @param point The point to add
+ * @return The given point
+ */
+P2trPoint*    p2tr_mesh_add_point       (P2trMesh  *self,
+                                         P2trPoint *point);
+
 P2trPoint*    p2tr_mesh_new_point       (P2trMesh          *mesh,
                                          const P2trVector2 *c);
 
 P2trPoint*    p2tr_mesh_new_point2      (P2trMesh  *mesh,
                                          gdouble    x,
                                          gdouble    y);
+
+/**
+ * Add an existing edge to the given mesh
+ * @param self The mesh to add the edge to
+ * @param edge The edge to add
+ * @return The given edge
+ */
+P2trEdge*     p2tr_mesh_add_edge        (P2trMesh  *self,
+                                         P2trEdge  *point);
 
 P2trEdge*     p2tr_mesh_new_edge        (P2trMesh  *mesh,
                                          P2trPoint *start,
@@ -71,6 +89,15 @@ P2trEdge*     p2tr_mesh_new_or_existing_edge (P2trMesh  *self,
                                               P2trPoint *start,
                                               P2trPoint *end,
                                               gboolean   constrained);
+
+/**
+ * Add an existing triangle to the given mesh
+ * @param self The mesh to add the triangle to
+ * @param edge The triangle to add
+ * @return The given triangle
+ */
+P2trTriangle* p2tr_mesh_add_triangle        (P2trMesh     *self,
+                                             P2trTriangle *tri);
 
 P2trTriangle* p2tr_mesh_new_triangle        (P2trMesh *mesh,
                                              P2trEdge *AB,
