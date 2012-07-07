@@ -43,8 +43,6 @@ typedef struct
   P2trPSLG *outline;
 } P2trCDT;
 
-void        p2tr_cdt_validate_unused (P2trCDT* self);
-
 /**
  * Create a new P2trCDT from an existing P2tCDT. The resulting P2trCDT
  * does not depend on the original P2tCDT which can be freed
@@ -72,6 +70,8 @@ gboolean    p2tr_cdt_visible_from_edge (P2trCDT     *self,
  */
 void        p2tr_cdt_validate_edges    (P2trCDT *self);
 
+void        p2tr_cdt_validate_unused   (P2trCDT* self);
+
 /**
  * Make sure the constrained empty circum-circle property holds,
  * meaning that each triangles circum-scribing circle is either empty
@@ -79,6 +79,16 @@ void        p2tr_cdt_validate_edges    (P2trCDT *self);
  * the triangle.
  */
 void        p2tr_cdt_validate_cdt      (P2trCDT *self);
+
+#if P2TR_CDT_VALIDATE
+#define P2TR_CDT_VALIDATE_EDGES(CDT)  p2tr_cdt_validate_edges(CDT)
+#define P2TR_CDT_VALIDATE_UNUSED(CDT) p2tr_cdt_validate_unused(CDT)
+#define P2TR_CDT_VALIDATE_CDT(CDT)    p2tr_cdt_validate_cdt(CDT)
+#else
+#define P2TR_CDT_VALIDATE_EDGES(CDT)  G_STMT_START { } G_STMT_END
+#define P2TR_CDT_VALIDATE_UNUSED(CDT) G_STMT_START { } G_STMT_END
+#define P2TR_CDT_VALIDATE_CDT(CDT)    G_STMT_START { } G_STMT_END
+#endif
 
 /**
  * Insert a point into the triangulation while preserving the

@@ -31,7 +31,7 @@ m4_define([lt_revision], [0])
 m4_define([lt_age], [0])
 
 # Declare the package details
-AC_INIT([poly2tri-c], p2tc_real_version, [lightningismyname@gmail.com])
+AC_INIT([poly2tri-c],[p2tc_real_version],[lightningismyname@gmail.com])
 
 P2TC_MAJOR_VERSION=p2tc_major_version
 P2TC_MINOR_VERSION=p2tc_minor_version
@@ -102,6 +102,39 @@ PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.28])
 CFLAGS="$CFLAGS $GLIB_CFLAGS"
 LDFLAGS="$LDFLAGS $GLIB_LIBS"
 LIBS="$LIBS $GLIB_LIBS"
+
+# Allow building with debugging symbols
+AC_MSG_CHECKING([whether to turn on debugging])
+AC_ARG_ENABLE(debug,
+              AS_HELP_STRING([--enable-debug],[turn on debugging (default=no)]),
+              if eval "test x$enable_debug = xyes"; then
+                DEBUGFLAG="-g"
+              fi)
+
+if test -n "$DEBUGFLAG"; then
+  AC_MSG_RESULT([yes])
+  CFLAGS="$DEBUGFLAG $CFLAGS"
+else
+  AC_MSG_RESULT([no])
+fi
+
+# Allow forcing a validation of the CDT after each refinement step
+AC_MSG_CHECKING([whether to enable CDT validation during refinement])
+AC_ARG_ENABLE(cdt-validation,
+              AS_HELP_STRING([--enable-cdt-validation],[turn on CDT validation during refinement (WARNING: SLOW!, default=no)]),
+              if eval "test x$enable_cdt_validation = xyes"; then
+                P2TR_ENABLE_CDT_VALIDATION="TRUE"
+              fi)
+
+if test -n "$P2TR_ENABLE_CDT_VALIDATION"; then
+  CDTVFLAG="-DP2TR_CDT_VALIDATE=TRUE"
+  AC_MSG_RESULT([yes])
+else
+  CDTVFLAG="-DP2TR_CDT_VALIDATE=FALSE"
+  AC_MSG_RESULT([no])
+fi
+
+CFLAGS="$CDTVFLAG $CFLAGS"
 
 # Output this configuration header file
 AC_CONFIG_HEADERS([config.h])

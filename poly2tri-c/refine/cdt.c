@@ -295,7 +295,7 @@ p2tr_cdt_insert_point (P2trCDT           *self,
   gboolean      inserted = FALSE;
   gint          i;
 
-  p2tr_cdt_validate_unused (self);
+  P2TR_CDT_VALIDATE_UNUSED (self);
 
   if (point_location_guess == NULL)
     tri = p2tr_mesh_find_point (self->mesh, pc);
@@ -329,7 +329,7 @@ p2tr_cdt_insert_point (P2trCDT           *self,
   /* We no longer need the triangle */
   p2tr_triangle_unref (tri);
 
-  p2tr_cdt_validate_unused (self);
+  P2TR_CDT_VALIDATE_UNUSED (self);
   return pt;
 }
 
@@ -446,7 +446,7 @@ p2tr_cdt_split_edge (P2trCDT   *self,
   GList     *fan = NULL, *new_edges = NULL;
   P2trHashSet *fan_edges;
 
-  p2tr_cdt_validate_unused (self);
+  P2TR_CDT_VALIDATE_UNUSED (self);
 
   p2tr_edge_remove (e);
 
@@ -482,7 +482,7 @@ p2tr_cdt_split_edge (P2trCDT   *self,
       p2tr_edge_unref (CY);
     }
 
-  p2tr_cdt_validate_unused (self);
+  P2TR_CDT_VALIDATE_UNUSED (self);
 
   return new_edges;
 }

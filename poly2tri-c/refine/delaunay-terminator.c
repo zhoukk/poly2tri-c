@@ -260,7 +260,7 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
   P2trVTriangle *vt;
   gint steps = 0;
 
-  p2tr_cdt_validate_cdt(self->mesh);
+  P2TR_CDT_VALIDATE_CDT (self->mesh);
 
   if (steps++ >= max_steps)
     return;
@@ -271,7 +271,7 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
       p2tr_dt_enqueue_segment (self, s);
 
   SplitEncroachedSubsegments (self, 0, p2tr_refiner_false_too_big);
-  p2tr_cdt_validate_cdt(self->mesh);
+  P2TR_CDT_VALIDATE_CDT (self->mesh);
 
   p2tr_hash_set_iter_init (&hs_iter, self->mesh->mesh->triangles);
   while (p2tr_hash_set_iter_next (&hs_iter, (gpointer*)&t))
@@ -293,7 +293,7 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
           P2trVEdgeSet *E;
           P2trPoint *cPoint;
 
-          p2tr_cdt_validate_cdt (self->mesh);
+          P2TR_CDT_VALIDATE_CDT (self->mesh);
           p2tr_triangle_get_circum_circle (t, &tCircum);
           c = &tCircum.center;
 
