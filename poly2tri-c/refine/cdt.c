@@ -121,7 +121,8 @@ p2tr_cdt_new (P2tCDT *cdt)
 
         if (! p2tr_point_has_edge_to (start_new, end_new))
           {
-            gboolean constrained = cdt_tri->constrained_edge[edge_index];
+            gboolean constrained = cdt_tri->constrained_edge[edge_index]
+            || cdt_tri->neighbors_[edge_index] == NULL;
             P2trEdge *edge = p2tr_mesh_new_edge (rmesh->mesh, start_new, end_new, constrained);
 
             /* If the edge is constrained, we should add it to the
@@ -157,6 +158,7 @@ p2tr_cdt_new (P2tCDT *cdt)
 
   /* And do an extra flip fix */
   p2tr_cdt_flip_fix (rmesh, new_edges);
+
   p2tr_vedge_set_free (new_edges);
 
   /* Now finally unref the points we added into the map */
