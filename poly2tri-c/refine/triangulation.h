@@ -33,11 +33,17 @@
 #ifndef __P2TC_REFINE_TRIANGULATION_H__
 #define __P2TC_REFINE_TRIANGULATION_H__
 
+/** \ingroup P2trPoint */
 typedef struct P2trPoint_     P2trPoint;
+/** \ingroup P2trEdge */
 typedef struct P2trEdge_      P2trEdge;
+/** \ingroup P2trTriangle */
 typedef struct P2trTriangle_  P2trTriangle;
+/** \ingroup P2trMesh */
 typedef struct P2trMesh_      P2trMesh;
 
+/** \ingroup P2trVEdge */
 typedef struct P2trVEdge_     P2trVEdge;
+/** \ingroup P2trVTriangle */
 typedef struct P2trVTriangle_ P2trVTriangle;
 #endif
