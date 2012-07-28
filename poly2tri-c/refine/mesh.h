@@ -44,15 +44,46 @@
  * of one continuous region, potentially with holes
  * @{
  */
+
+/**
+ * A struct for representing a triangular mesh
+ */
 struct P2trMesh_
 {
+  /**
+   * A hash set containing pointers to all the triangles
+   * (\ref P2trTriangle) in the mesh
+   */
   P2trHashSet *triangles;
+
+  /**
+   * A hash set containing pointers to all the edges (\ref P2trEdge) in
+   * the mesh
+   */
   P2trHashSet *edges;
+
+  /**
+   * A hash set containing pointers to all the points (\ref P2trPoint)
+   * in the mesh
+   */
   P2trHashSet *points;
 
+  /**
+   * A boolean flag specifying whether recording of actions on the
+   * mesh (for allowing to undo them) is taking place right now
+   */
   gboolean     record_undo;
+
+  /**
+   * A queue stroing all the actions done on the mesh since the begining
+   * of the recording
+   */
   GQueue       undo;
-  
+
+  /**
+   * Counts the amount of references to the mesh. When this counter
+   * reaches zero, the mesh will be freed
+   */
   guint        refcount;
 };
 
@@ -232,6 +263,7 @@ void          p2tr_mesh_unref           (P2trMesh *mesh);
 /**
  * Increase the reference count to this mesh by 1
  * @param mesh The mesh whose reference count should be increased
+ * @return The given mesh (\ref mesh)
  */
 P2trMesh*     p2tr_mesh_ref             (P2trMesh *mesh);
 
