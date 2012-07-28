@@ -49,7 +49,17 @@ extern "C"
 
 #define p2tr_hash_set_new_default() g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL)
 #define p2tr_hash_set_new(hash_func, equal_func, destroy) g_hash_table_new_full ((hash_func), (equal_func), (destroy),NULL)
-#define p2tr_hash_set_insert(set,element) g_hash_table_insert ((set), (element), (element))
+#define p2tr_hash_set_insert(set,element)                              \
+G_STMT_START                                                           \
+{                                                                      \
+  /* The "obvious" code (presented below) won't work:               */ \
+  /*   g_hash_table_insert ((set), (element), (element))            */ \
+  /* since it will cause double evaluation of (element) which is a  */ \
+  /* problem!                                                       */ \
+  gpointer P2TR_HASH_SET_ELEM = (element);                             \
+  g_hash_table_insert ((set), P2TR_HASH_SET_ELEM, P2TR_HASH_SET_ELEM); \
+}                                                                      \
+G_STMT_END
 #define p2tr_hash_set_contains(set,element) g_hash_table_lookup_extended ((set), (element), NULL, NULL)
 #define p2tr_hash_set_remove(set,element) g_hash_table_remove ((set), (element))
 #define p2tr_hash_set_remove_all(set) g_hash_table_remove_all ((set))
