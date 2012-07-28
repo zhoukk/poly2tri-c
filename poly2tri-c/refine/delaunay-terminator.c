@@ -183,7 +183,7 @@ p2tr_dt_new (gdouble theta, P2trTriangleTooBig delta, P2trCDT *cdt)
   g_queue_init (&self->Qs);
   self->delta = delta;
   self->theta = theta;
-  self->mesh = cdt;
+  self->cdt = cdt;
   return self;
 }
 
@@ -260,20 +260,20 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
   P2trVTriangle *vt;
   gint steps = 0;
 
-  P2TR_CDT_VALIDATE_CDT (self->mesh);
+  P2TR_CDT_VALIDATE_CDT (self->cdt);
 
   if (steps++ >= max_steps)
     return;
 
-  p2tr_hash_set_iter_init (&hs_iter, self->mesh->mesh->edges);
+  p2tr_hash_set_iter_init (&hs_iter, self->cdt->mesh->edges);
     while (p2tr_hash_set_iter_next (&hs_iter, (gpointer*)&s))
     if (s->constrained && p2tr_cdt_is_encroached (s))
       p2tr_dt_enqueue_segment (self, s);
 
   SplitEncroachedSubsegments (self, 0, p2tr_refiner_false_too_big);
-  P2TR_CDT_VALIDATE_CDT (self->mesh);
+  P2TR_CDT_VALIDATE_CDT (self->cdt);
 
-  p2tr_hash_set_iter_init (&hs_iter, self->mesh->mesh->triangles);
+  p2tr_hash_set_iter_init (&hs_iter, self->cdt->mesh->triangles);
   while (p2tr_hash_set_iter_next (&hs_iter, (gpointer*)&t))
     if (p2tr_triangle_smallest_non_constrained_angle (t) < self->theta)
       p2tr_dt_enqueue_tri (self, t);
@@ -293,11 +293,11 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
           P2trVEdgeSet *E;
           P2trPoint *cPoint;
 
-          P2TR_CDT_VALIDATE_CDT (self->mesh);
+          P2TR_CDT_VALIDATE_CDT (self->cdt);
           p2tr_triangle_get_circum_circle (t, &tCircum);
           c = &tCircum.center;
 
-          triContaining_c = p2tr_mesh_find_point_local (self->mesh->mesh, c, t);
+          triContaining_c = p2tr_mesh_find_point_local (self->cdt->mesh, c, t);
 
           /* If no edge is encroached, then this must be
            * inside the triangulation domain!!! */
@@ -309,14 +309,14 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
 
           /* Now, check if this point would encroach any edge
            * of the triangulation */
-          p2tr_mesh_action_group_begin (self->mesh->mesh);
+          p2tr_mesh_action_group_begin (self->cdt->mesh);
 
-          cPoint = p2tr_cdt_insert_point (self->mesh, c, triContaining_c);
-          E = p2tr_cdt_get_segments_encroached_by (self->mesh, cPoint);
+          cPoint = p2tr_cdt_insert_point (self->cdt, c, triContaining_c);
+          E = p2tr_cdt_get_segments_encroached_by (self->cdt, cPoint);
 
           if (p2tr_vedge_set_size (E) == 0)
             {
-              p2tr_mesh_action_group_commit (self->mesh->mesh);
+              p2tr_mesh_action_group_commit (self->cdt->mesh);
               NewVertex (self, cPoint, self->theta, self->delta);
             }
           else
@@ -324,7 +324,7 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
               P2trVEdge *vSegment;
               gdouble d;
 
-              p2tr_mesh_action_group_undo (self->mesh->mesh);
+              p2tr_mesh_action_group_undo (self->cdt->mesh);
               /* The (reverted) changes to the mesh may have eliminated the
                * original triangle t. We must restore it manually from
                * the virtual triangle
@@ -409,18 +409,18 @@ SplitEncroachedSubsegments (P2trDelaunayTerminator *self, gdouble theta, P2trTri
   while (! p2tr_dt_segment_queue_is_empty (self))
   {
     P2trEdge *s = p2tr_dt_dequeue_segment (self);
-    if (p2tr_hash_set_contains (self->mesh->mesh->edges, s))
+    if (p2tr_hash_set_contains (self->cdt->mesh->edges, s))
       {
         P2trVector2 v;
         P2trPoint *Pv;
         GList *parts, *iter;
 
         ChooseSplitVertex (s, &v);
-        Pv = p2tr_mesh_new_point (self->mesh->mesh, &v);
+        Pv = p2tr_mesh_new_point (self->cdt->mesh, &v);
         
         /* Update here if using diametral lenses */
 
-        parts = p2tr_cdt_split_edge (self->mesh, s, Pv);
+        parts = p2tr_cdt_split_edge (self->cdt, s, Pv);
         
         NewVertex (self, Pv, theta, delta);
 

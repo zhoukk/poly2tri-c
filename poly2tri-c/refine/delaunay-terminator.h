@@ -40,7 +40,7 @@
 
 typedef struct
 {
-  P2trCDT            *mesh;
+  P2trCDT            *cdt;
   GQueue              Qs;
   GSequence          *Qt;
   gdouble             theta;
