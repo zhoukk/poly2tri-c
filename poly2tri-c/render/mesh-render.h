@@ -36,58 +36,99 @@
 #include <stdio.h>
 #include <glib.h>
 
+/**
+ * A struct containing the necessary information to render a "color
+ * image" of a triangular mesh, by interpolating "colors" between its
+ * points.
+ * This can in fact be used to interpolate any N-Dimensional value set
+ * along the triangles of a mesh.
+ */
 typedef struct {
-  /* Minimal X and Y coordinates to start sampling at */
+  /** Minimal X and Y coordinates to start sampling at */
   gdouble min_x, min_y;
-  /* Size of a step in each axis */
+  /** Size of a step (distance between samples) in each axis */
   gdouble step_x, step_y;
-  /* The amount of samples desired in each axis */
+  /** The amount of samples desired in each axis */
   guint x_samples, y_samples;
-  /* The amount of channels per pixel, both in destination buffer and in the
-   * colors returned from the matching point-to-color function */
+  /**
+   * The amount of channels per "pixel", both in the destination buffer
+   * and in the colors returned from the matching point-to-color
+   * function. Note that this does not include the alpha channel!
+   */
   guint cpp;
+  /**
+   * Specifies whether the alpha channel (0 outside the mesh, 1 inside)
+   * should come after or before the the channel colors
+   */
+  gboolean alpha_last;
 } P2trImageConfig;
 
-typedef void (*P2trPointToColorFunc) (P2trPoint* point, gfloat *dest, gpointer user_data);
+typedef void (*P2trPointToColorFuncB)   (P2trPoint            *point,
+                                         guint8               *dest,
+                                         gpointer              user_data);
 
-typedef union {
-  P2trTriangle *tri;
+typedef void (*P2trPointToColorFuncF)   (P2trPoint            *point,
+                                         gfloat               *dest,
+                                         gpointer              user_data);
+
+typedef void (*P2trPointToColorFuncC)   (P2trPoint            *point,
+                                         void                 *dest,
+                                         gpointer              user_data);
+
+/**
+ * A struct for caching the barycentric coordinates of a point inside
+ * a triangle. A buffer of these structs is referred to as a UVT cache.
+ */
+typedef struct {
   gdouble       u;
   gdouble       v;
-} P2truvt;
+  P2trTriangle *tri;
+} P2trUVT;
 
-void p2tr_test_point_to_color (P2trPoint* point, gfloat *dest, gpointer user_data);
+/**
+ * Compute the UVT cache for the given mesh for the area and resolution
+ * specified by the image configuration struct. The cache for the point
+ * (min_x + i * step_x, min_y + j * step_y) would be at the index
+ * j * x_samples + i (assuming of course the point is inside the area
+ * described by image configuration struct).
+ */
+void   p2tr_mesh_render_cache_uvt       (P2trMesh             *mesh,
+                                         P2trUVT              *dest,
+                                         P2trImageConfig      *config);
 
-void
-p2tr_mesh_render_cache_uvt (P2trMesh    *T,
-                            P2truvt              *dest,
-                            P2trImageConfig      *config);
+/**
+ * Similar to @ref p2tr_mesh_render_cache_uvt, but cache only the
+ * first @ref dest_len pixels.
+ */
+void   p2tr_mesh_render_cache_uvt_exact (P2trMesh             *mesh,
+                                         P2trUVT              *dest,
+                                         gint                  dest_len,
+                                         P2trImageConfig      *config);
 
-/* Like the regular version, but cache only the specified amount of
- * pixels */
-void
-p2tr_mesh_render_cache_uvt_exact (P2trMesh    *T,
-                                  P2truvt              *dest,
-                                  gint                  dest_len,
-                                  P2trImageConfig      *config);
+void   p2tr_mesh_render_from_cache_f    (P2trUVT               *uvt_cache,
+                                         gfloat                *dest,
+                                         gint                   n,
+                                         P2trImageConfig       *config,
+                                         P2trPointToColorFuncF  pt2col,
+                                         gpointer               pt2col_user_data);
 
-void
-p2tr_mesh_render_scanline (P2trMesh    *T,
-                           gfloat               *dest,
-                           P2trImageConfig      *config,
-                           P2trPointToColorFunc  pt2col,
-                           gpointer              pt2col_user_data);
+void   p2tr_mesh_render_f               (P2trMesh              *mesh,
+                                         gfloat                *dest,
+                                         P2trImageConfig       *config,
+                                         P2trPointToColorFuncF  pt2col,
+                                         gpointer               pt2col_user_data);
 
-void
-p2tr_mesh_render_scanline2 (P2truvt              *uvt_cache,
-                            gfloat               *dest,
-                            P2trImageConfig      *config,
-                            P2trPointToColorFunc  pt2col,
-                            gpointer              pt2col_user_data);
+void   p2tr_mesh_render_from_cache_b    (P2trUVT               *uvt_cache,
+                                         guint8                *dest,
+                                         gint                   n,
+                                         P2trImageConfig       *config,
+                                         P2trPointToColorFuncB  pt2col,
+                                         gpointer               pt2col_user_data);
 
-void
-p2tr_write_ppm (FILE            *f,
-                gfloat          *dest,
-                P2trImageConfig *config);
+void   p2tr_mesh_render_b               (P2trMesh              *mesh,
+                                         guint8                *dest,
+                                         P2trImageConfig       *config,
+                                         P2trPointToColorFuncB  pt2col,
+                                         gpointer               pt2col_user_data);
 
 #endif

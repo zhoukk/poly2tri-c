@@ -36,23 +36,6 @@
 #include <poly2tri-c/refine/refine.h>
 #include "mesh-render.h"
 
-/* Most computations using the Barycentric Coordinates are Based on
- * http://www.blackpawn.com/texts/pointinpoly/default.html */
-
-/* This function is simply to make sure the code is consitant */
-static inline void
-p2tr_triangle_barycentric_get_points (P2trTriangle  *self,
-                                      P2trPoint    **A,
-                                      P2trPoint    **B,
-                                      P2trPoint    **C)
-{
-  *A = P2TR_TRIANGLE_GET_POINT(self, 0);
-  *B = P2TR_TRIANGLE_GET_POINT(self, 1);
-  *C = P2TR_TRIANGLE_GET_POINT(self, 2);
-}
-
-#define USE_BARYCENTRIC(u,v,A,B,C) ((A) + (v)*((B)-(A)) + (u)*((C)-(A)))
-
 /* This function implements box logic to see if a point is contained in a
  * triangles bounding box. This is very useful for cases where there are many
  * triangles to test against a single point, and most of them aren't even near
@@ -64,13 +47,13 @@ p2tr_triangle_barycentric_get_points (P2trTriangle  *self,
  * See http://lightningismyname.blogspot.com/2011/08/quickboxa-quick-point-in-triangle-test.html
  */
 gboolean
-p2tr_triangule_quick_box_test (P2trTriangle *self,
+p2tr_triangle_quick_box_test (P2trTriangle *self,
                                gdouble       Px,
                                gdouble       Py)
 {
-  P2trPoint *A = self->edges[2]->end;
-  P2trPoint *B = self->edges[0]->end;
-  P2trPoint *C = self->edges[1]->end;
+  P2trPoint *A = P2TR_TRIANGLE_GET_POINT (self, 0);
+  P2trPoint *B = P2TR_TRIANGLE_GET_POINT (self, 1);
+  P2trPoint *C = P2TR_TRIANGLE_GET_POINT (self, 2);
 
   register gboolean xPBorder = B->c.x <= Px;
   register gboolean yPBorder = B->c.y <= Py;
@@ -79,13 +62,9 @@ p2tr_triangule_quick_box_test (P2trTriangle *self,
           || (((A->c.y <= Py) == yPBorder) && (yPBorder == (C->c.y <= Py)));
 }
 
-#define uvt3_u(ptr) (((ptr)+0)->u)
-#define uvt3_v(ptr) (((ptr)+1)->v)
-#define uvt3_t(ptr) (((ptr)+2)->tri)
-
 void
 p2tr_mesh_render_cache_uvt (P2trMesh        *T,
-                            P2truvt         *dest,
+                            P2trUVT         *dest,
                             P2trImageConfig *config)
 {
   p2tr_mesh_render_cache_uvt_exact (T, dest, config->x_samples * config->y_samples, config);
@@ -93,154 +72,202 @@ p2tr_mesh_render_cache_uvt (P2trMesh        *T,
 
 void
 p2tr_mesh_render_cache_uvt_exact (P2trMesh        *T,
-                                  P2truvt         *dest,
+                                  P2trUVT         *dest,
                                   gint             dest_len,
                                   P2trImageConfig *config)
 {
   gint x, y, n = dest_len;
-  P2truvt *uvt = dest;
+  P2trUVT *uvt = dest;
   P2trTriangle *tr_prev = NULL;
   P2trVector2 pt;
   
   pt.x = config->min_x;
   pt.y = config->min_y;
 
-  uvt3_t(uvt) = p2tr_mesh_find_point_local2 (T, &pt, NULL, &uvt3_u(uvt), &uvt3_v(uvt));
-  if (uvt3_t(uvt)) p2tr_triangle_unref (uvt3_t(uvt));
-  tr_prev = uvt3_t(uvt);
+  uvt->tri = p2tr_mesh_find_point_local2 (T, &pt, NULL, &uvt->u, &uvt->v);
+  if (uvt->tri) p2tr_triangle_unref (uvt->tri);
+  tr_prev = uvt->tri;
   
-  for (y = 0, pt.y = config->min_y; y < config->y_samples; y++, pt.y += config->step_y)
-    for (x = 0, pt.x = config->min_x; x < config->x_samples; x++, pt.x += config->step_x)
+  for (y = 0, pt.y = config->min_y; y < config->y_samples; ++y, pt.y += config->step_y)
+    for (x = 0, pt.x = config->min_x; x < config->x_samples; ++x, pt.x += config->step_x)
       {
         if (n-- == 0) return;
-        uvt3_t(uvt) = p2tr_mesh_find_point_local2 (T, &pt, tr_prev, &uvt3_u(uvt), &uvt3_v(uvt));
-        if (uvt3_t(uvt)) p2tr_triangle_unref (uvt3_t(uvt));
-        tr_prev = uvt3_t(uvt);
-        uvt += 3;
+        uvt->tri = p2tr_mesh_find_point_local2 (T, &pt, tr_prev, &uvt->u, &uvt->v);
+        if (uvt->tri) p2tr_triangle_unref (uvt->tri);
+        tr_prev = uvt->tri;
+        ++uvt;
       }
 }
 
+#define P2TR_USE_BARYCENTRIC(u, v, A, B, C)                            \
+    ((A) + (v) * ((B) - (A)) + (u) * ((C) - (A)))
+
+/**
+ * This is a general macro for using a UVT cache in order to render a
+ * color interpolation triangular mesh. The reason this is a macro and
+ * not a function is to allow using different numeric types for
+ * representing colors
+ * @param uvt_cache The buffer containing the UVT cache of the area to
+ *        render. Should be of type  @ref P2trUVT*
+ * @param uvt_cache_w The width of the area for which the UVT cache was
+ *        created. Should be a positive integer.
+ * @param uvt_cache_h The height of the area for which the UVT cache was
+ *        created. Should be a positive integer.
+ * @param dest The buffer in which the rendering result should be saved.
+ *        Should be of type @ref cformat*
+ * @param n The amount of pixels to render into dest. Should be a
+ *        positive integer.
+ * @param cformat The type of the data inside @ref dest. This can be any
+ *        numeric type (double, float, int, ...)
+ * @param cpp The amount of color channels per pixel, not including the
+ *        alpha channel. Should be a positive integer.
+ * @param pt2col The function which maps mesh points into colors. This
+ *        function should be deterministic!
+ * @param pt2col_user_data An additional parameter to @ref pt2col
+ * @param alpha_last Specifies whether the alpha component should come
+ *        after or before the other color channels. Should be a boolean.
+ */
+#define P2TR_MESH_RENDER_FROM_CACHE(uvt_cache,                         \
+                                    uvt_cache_w,                       \
+                                    uvt_cache_h,                       \
+                                    dest,                              \
+                                    n,                                 \
+                                    cformat,                           \
+                                    cpp,                               \
+                                    pt2col,                            \
+                                    pt2col_user_data,                  \
+                                    alpha_last)                        \
+G_STMT_START                                                           \
+{                                                                      \
+  P2trUVT *uvt_p = (uvt_cache);                                        \
+  guint remain = n;                                                    \
+                                                                       \
+  P2trTriangle *tr_prev = NULL;                                        \
+  guint x, y, i;                                                       \
+  P2trPointToColorFuncC pt2col_c = (P2trPointToColorFuncC) (pt2col); \
+                                                                       \
+  cformat *colA = g_newa (cformat, (cpp));                             \
+  cformat *colB = g_newa (cformat, (cpp));                             \
+  cformat *colC = g_newa (cformat, (cpp));                             \
+                                                                       \
+  cformat *pixel = dest;                                               \
+                                                                       \
+  for (y = 0; y < (uvt_cache_w) && remain > 0; ++y)                    \
+    for (x = 0; x < (uvt_cache_h) && remain > 0; ++x, --remain, ++uvt_p) \
+      {                                                                \
+        P2trTriangle *tr_now = uvt_p->tri;                             \
+                                                                       \
+        /* If we are outside of the triangulation, set alpha to   */   \
+        /* zero and continue */                                        \
+        if (tr_now == NULL)                                            \
+          {                                                            \
+            /* Remember that cpp does not include the alpha! */        \
+            pixel[(alpha_last) ? (cpp) : 0] = 0;                       \
+            pixel += cpp + 1;                                          \
+          }                                                            \
+        else                                                           \
+          {                                                            \
+            gdouble u = uvt_p->u;                                      \
+            gdouble v = uvt_p->v;                                      \
+            /* If the triangle hasn't changed since the previous  */   \
+            /* pixel, then don't sample the color at the vertices */   \
+            /* again, since that is an expensive process!         */   \
+            if (tr_now != tr_prev)                                     \
+              {                                                        \
+                /* Get the points of the triangle in some fixed   */   \
+                /* order, just to make sure that the computation  */   \
+                /* goes the same everywhere                       */   \
+                P2trPoint *A = P2TR_TRIANGLE_GET_POINT (tr_now, 0);    \
+                P2trPoint *B = P2TR_TRIANGLE_GET_POINT (tr_now, 1);    \
+                P2trPoint *C = P2TR_TRIANGLE_GET_POINT (tr_now, 2);    \
+                /* At each point 'X' sample the color into 'colX' */   \
+                pt2col_c (A, (gpointer) colA, pt2col_user_data);       \
+                pt2col_c (B, (gpointer) colB, pt2col_user_data);       \
+                pt2col_c (C, (gpointer) colC, pt2col_user_data);       \
+                /* Set the current triangle */                         \
+                tr_now = tr_prev;                                      \
+              }                                                        \
+                                                                       \
+            /* We are inside the mesh, so set as opaque */             \
+            if (! alpha_last) *pixel++ = (cformat) 1;                  \
+            /* Interpolate the color using barycentric coodinates */   \
+            for (i = 0; i < cpp; ++i)                                  \
+              *pixel++ = (cformat) P2TR_USE_BARYCENTRIC (u, v,         \
+                  colA[i], colB[i], colC[i]);                          \
+            /* We are inside the mesh, so set as opaque */             \
+            if (alpha_last) *pixel++ = (cformat) 1;                    \
+          }                                                            \
+      }                                                                \
+}                                                                      \
+G_STMT_END
+
+#define P2TR_MESH_RENDER(mesh,                                         \
+                         dest,                                         \
+                         config,                                       \
+                         pt2col,                                       \
+                         pt2col_user_data,                             \
+                         cache_render_func)                            \
+G_STMT_START                                                           \
+{                                                                      \
+  gint n = (config)->x_samples * (config)->y_samples;                  \
+  P2trUVT *uvt_cache = g_new (P2trUVT, n);                             \
+                                                                       \
+  p2tr_mesh_render_cache_uvt_exact ((mesh), uvt_cache, n, (config));   \
+  cache_render_func (uvt_cache, (dest), n, (config), (pt2col),         \
+      (pt2col_user_data));                                             \
+                                                                       \
+  g_free (uvt_cache);                                                  \
+}                                                                      \
+G_STMT_END
+
 void
-p2tr_mesh_render_scanline (P2trMesh             *T,
-                           gfloat               *dest,
-                           P2trImageConfig      *config,
-                           P2trPointToColorFunc  pt2col,
-                           gpointer              pt2col_user_data)
+p2tr_mesh_render_from_cache_f (P2trUVT               *uvt_cache,
+                               gfloat                *dest,
+                               gint                   n,
+                               P2trImageConfig       *config,
+                               P2trPointToColorFuncF  pt2col,
+                               gpointer               pt2col_user_data)
 {
-  P2truvt *uvt_cache = g_new (P2truvt, 3 * config->x_samples * config->y_samples);
-  GTimer *timer = g_timer_new ();
-  
-  g_timer_start (timer);
-  p2tr_mesh_render_cache_uvt (T, uvt_cache, config);
-  g_timer_stop (timer);
-  g_debug ("Mesh preprocessing took %f seconds\n", g_timer_elapsed (timer, NULL));
-
-  g_timer_start (timer);
-  p2tr_mesh_render_scanline2 (uvt_cache, dest, config, pt2col, pt2col_user_data);
-  g_timer_stop (timer);
-  g_debug ("Mesh rendering took %f seconds\n", g_timer_elapsed (timer, NULL));
-
-  g_timer_destroy (timer);
-  g_free (uvt_cache);
-  
+  P2TR_MESH_RENDER_FROM_CACHE (uvt_cache,
+      config->x_samples, config->y_samples,
+      dest, n, gfloat, config->cpp,
+      pt2col, pt2col_user_data,
+      config->alpha_last);
 }
 
-
 void
-p2tr_mesh_render_scanline2 (P2truvt              *uvt_cache,
-                            gfloat               *dest,
-                            P2trImageConfig      *config,
-                            P2trPointToColorFunc  pt2col,
-                            gpointer              pt2col_user_data)
+p2tr_mesh_render_f (P2trMesh              *mesh,
+                    gfloat                *dest,
+                    P2trImageConfig       *config,
+                    P2trPointToColorFuncF  pt2col,
+                    gpointer               pt2col_user_data)
 {
-  P2truvt *uvt_p = uvt_cache;
-
-  gdouble u, v;
-  P2trTriangle *tr_prev = NULL, *tr_now;
-
-  gint x, y;
-
-  P2trPoint *A = NULL, *B = NULL, *C = NULL;
-
-  gfloat *colA = g_newa (gfloat, config->cpp);
-  gfloat *colB = g_newa (gfloat, config->cpp);
-  gfloat *colC = g_newa (gfloat, config->cpp);
-
-  gfloat *pixel = dest;
-
-  for (y = 0; y < config->y_samples; y++)
-    for (x = 0; x < config->x_samples; x++)
-    {
-        u      = uvt3_u (uvt_p);
-        v      = uvt3_v (uvt_p);
-        tr_now = uvt3_t (uvt_p);
-        
-        uvt_p += 3;
-
-        /* If we are outside of the triangulation, set alpha to zero and
-         * continue */
-        if (tr_now == NULL)
-          {
-            pixel[3] = 0;
-            pixel += 4;
-          }
-        else
-          {
-            /* If the triangle hasn't changed since the previous pixel,
-             * then don't sample the color at the vertices again, since
-             * that is an expensive process! */
-            if (tr_now != tr_prev)
-              {
-                /* Get the points of the triangle in some fixed order,
-                 * just to make sure that the computation goes the same
-                 * everywhere */
-                p2tr_triangle_barycentric_get_points (tr_now, &A, &B, &C);
-                /* At each point X sample the color into colX */
-                pt2col (A, colA, pt2col_user_data);
-                pt2col (B, colB, pt2col_user_data);
-                pt2col (C, colC, pt2col_user_data);
-                /* Set the current triangle */
-                tr_now = tr_prev;
-              }
-
-            /* Interpolate the color using barycentric coodinates */
-            *pixel++ = USE_BARYCENTRIC (u,v,colA[0],colB[0],colC[0]);
-            *pixel++ = USE_BARYCENTRIC (u,v,colA[1],colB[1],colC[1]);
-            *pixel++ = USE_BARYCENTRIC (u,v,colA[2],colB[2],colC[2]);
-            /* Finally, set as opaque since we are inside the mesh */
-            *pixel++ = 1;
-          }
-    }
+  P2TR_MESH_RENDER (mesh, dest, config, pt2col, pt2col_user_data,
+      p2tr_mesh_render_from_cache_f);
 }
 
 void
-p2tr_write_ppm (FILE            *f,
-                gfloat          *dest,
-                P2trImageConfig *config)
+p2tr_mesh_render_from_cache_b (P2trUVT               *uvt_cache,
+                               guint8                *dest,
+                               gint                   n,
+                               P2trImageConfig       *config,
+                               P2trPointToColorFuncB  pt2col,
+                               gpointer               pt2col_user_data)
 {
-  gint x, y;
-  gfloat *pixel;
+  P2TR_MESH_RENDER_FROM_CACHE (uvt_cache,
+      config->x_samples, config->y_samples,
+      dest, n, guint8, config->cpp,
+      pt2col, pt2col_user_data,
+      config->alpha_last);
+}
 
-  fprintf (f, "P3\n");
-  fprintf (f, "%d %d\n", config->x_samples, config->y_samples);
-  fprintf (f, "255\n");
-
-  pixel = dest;
-
-  for (y = 0; y < config->y_samples; y++)
-    {
-      for (x = 0; x < config->x_samples; x++)
-        {
-          if (pixel[3] <= 0.5)
-            fprintf (f, "  0   0   0");
-          else
-            fprintf (f, "%3d %3d %3d", (guchar)(pixel[0] * 255), (guchar)(pixel[1] * 255), (guchar)(pixel[2] * 255));
-
-          if (x != config->x_samples - 1)
-            fprintf (f, "   ");
-
-          pixel += 4;
-        }
-      fprintf (f, "\n");
-    }
+void
+p2tr_mesh_render_b (P2trMesh              *mesh,
+                    guint8                *dest,
+                    P2trImageConfig       *config,
+                    P2trPointToColorFuncB  pt2col,
+                    gpointer               pt2col_user_data)
+{
+  P2TR_MESH_RENDER (mesh, dest, config, pt2col, pt2col_user_data,
+      p2tr_mesh_render_from_cache_b);
 }

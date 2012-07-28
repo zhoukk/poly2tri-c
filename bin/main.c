@@ -50,6 +50,13 @@ static gchar *input_file = NULL;
 static gchar *output_file = NULL;
 static gboolean render_mesh = FALSE;
 static gboolean render_svg = FALSE;
+static gint mesh_width = 100;
+static gint mesh_height = 100;
+
+static gfloat min_x = + G_MAXFLOAT;
+static gfloat min_y = + G_MAXFLOAT;
+static gfloat max_x = - G_MAXFLOAT;
+static gfloat max_y = - G_MAXFLOAT;
 
 static GOptionEntry entries[] =
 {
@@ -59,6 +66,8 @@ static GOptionEntry entries[] =
   { "input",            'i', 0, G_OPTION_ARG_FILENAME, &input_file,       "Use input file at FILE_IN",         "FILE_IN" },
   { "output",           'o', 0, G_OPTION_ARG_FILENAME, &output_file,      "Use output file at FILE_OUT",       "FILE_OUT" },
   { "render-mesh",      'm', 0, G_OPTION_ARG_NONE,     &render_mesh,      "Render a color mesh of the result", NULL },
+  { "mesh-width",       'w', 0, G_OPTION_ARG_INT,      &mesh_width,       "The width of the color mesh image", NULL },
+  { "mesh-height",      'h', 0, G_OPTION_ARG_INT,      &mesh_height,      "The height of the color mesh iamge",NULL },
   { "render-svg",       's', 0, G_OPTION_ARG_NONE,     &render_svg,       "Render an outline of the result",   NULL },
   { NULL }
 };
@@ -68,10 +77,10 @@ typedef gfloat Point2f[2];
 
 /**
  * read_points_file:
- * @path: The path to the points & colors file
- * @points: An pointer to an array of pointers to #P2RrPoint will be returned
+ * @param path The path to the points & colors file
+ * @param points An pointer to an array of pointers to @ref P2RrPoint will be returned
  *          here. NULL can be passed.
- * @colors: An pointer to an array of colors will be returned here. NULL can be
+ * @param colors An pointer to an array of colors will be returned here. NULL can be
  *          passed.
  *
  *
@@ -79,10 +88,12 @@ typedef gfloat Point2f[2];
 void
 read_points_file (const gchar       *path,
                   P2tPointPtrArray  *points,
+                  P2tPointPtrArray  *pointsH,
+                  P2tPointPtrArray  *pointsS,
                   GArray           **colors)
 {
   FILE *f = fopen (path, "r");
-  gint countPts = 0, countCls = 0;
+  gint countPts = 0, countPtsH = 0, countPtsS = 0, countCls = 0;
 
   if (f == NULL)
     {
@@ -94,16 +105,22 @@ read_points_file (const gchar       *path,
     g_print ("Now parsing \"%s\"\n", path);
 
   if (points != NULL) *points = g_ptr_array_new ();
+  if (pointsH != NULL) *pointsH = g_ptr_array_new ();
+  if (pointsS != NULL) *pointsS = g_ptr_array_new ();
   if (colors != NULL) *colors = g_array_new (FALSE, FALSE, sizeof (Color3f));
 
   if (debug_print && points == NULL) g_print ("Points will not be kept\n");
+  if (debug_print && pointsH == NULL) g_print ("Points Hole will not be kept\n");
+  if (debug_print && pointsS == NULL) g_print ("A steiner point will not be kept\n");
   if (debug_print && colors == NULL) g_print ("Colors will not be kept\n");
 
   while (! feof (f))
     {
       Color3f col = { 0, 0, 0 };
       Point2f ptc = { 0, 0 };
-      gboolean foundCol = FALSE, foundPt = FALSE;
+      Point2f pth = { 0, 0 };
+      Point2f pts = { 0, 0 };
+      gboolean foundCol = FALSE, foundPt = FALSE, foundPtH = FALSE, foundPtS = FALSE;
 
       /* Read only while we have valid points */
       gint readSize = fscanf (f, "@ %f %f ", &ptc[0], &ptc[1]);
@@ -121,7 +138,49 @@ read_points_file (const gchar       *path,
           if (points != NULL)
             {
               g_ptr_array_add (*points, p2t_point_new_dd (ptc[0], ptc[1]));
+              min_x = MIN(ptc[0], min_x);
+              min_y = MIN(ptc[1], min_y);
+              max_x = MAX(ptc[0], max_x);
+              max_y = MAX(ptc[1], max_y);
               countPts++;
+            }
+        }
+
+      readSize = fscanf (f, "& %f %f ", &pth[0], &pth[1]);
+
+      if (readSize > 0)
+        {
+          if (readSize != 2)
+            {
+              g_error ("Error! %d is an unexpected number of floats after point '&' declaration!\n", readSize);
+              exit (1);
+            }
+
+          foundPtH = TRUE;
+
+          if (pointsH != NULL)
+            {
+              g_ptr_array_add (*pointsH, p2t_point_new_dd (pth[0], pth[1]));
+              countPtsH++;
+            }
+        }
+
+      readSize = fscanf (f, "* %f %f ", &pts[0], &pts[1]);
+
+      if (readSize > 0)
+        {
+          if (readSize != 2)
+            {
+              g_error ("Error! %d is an unexpected number of floats after point '*' declaration!\n", readSize);
+              exit (1);
+            }
+
+          foundPtS = TRUE;
+
+          if (pointsS != NULL)
+            {
+              g_ptr_array_add (*pointsS, p2t_point_new_dd (pts[0], pts[1]));
+              countPtsS++;
             }
         }
 
@@ -147,19 +206,21 @@ read_points_file (const gchar       *path,
               countCls++;
             }
        }
-     
-     if (!foundCol && !foundPt)
+
+     if (!foundCol && !foundPt && !foundPtH && !foundPtS)
        break;
     }
 
   fclose (f);
 
   if (verbose)
-    g_print ("Read %d points and %d colors\n", countPts, countCls);
+    g_print ("Read %d points, %d points hole, %d a steiner points and %d colors\n", countPts, countPtsH, countPtsS, countCls);
 }
 
 void
 free_read_results (P2tPointPtrArray  *points,
+                   P2tPointPtrArray  *pointsH,
+                   P2tPointPtrArray  *pointsS,
                    GArray           **colors)
 {
   gint i;
@@ -169,6 +230,20 @@ free_read_results (P2tPointPtrArray  *points,
       for (i = 0; i < (*points)->len; i++)
         p2t_point_free (point_index (*points, i));
       g_ptr_array_free (*points, TRUE);
+    }
+
+  if (pointsH != NULL)
+    {
+      for (i = 0; i < (*pointsH)->len; i++)
+        p2t_point_free (point_index (*pointsH, i));
+      g_ptr_array_free (*pointsH, TRUE);
+    }
+
+  if (pointsS != NULL)
+    {
+      for (i = 0; i < (*pointsS)->len; i++)
+        p2t_point_free (point_index (*pointsS, i));
+      g_ptr_array_free (*pointsS, TRUE);
     }
 
   if (colors != NULL)
@@ -181,13 +256,45 @@ free_read_results (P2tPointPtrArray  *points,
  * make sure to take them into consideration in all the color channels.
  */
 static void
-test_point_to_color (P2trPoint* point, gfloat *dest, gpointer user_data)
+test_point_to_color (P2trPoint* point, guint8 *dest, gpointer user_data)
 {
   gulong value = (gulong) point;
   guchar b1 = value & 0xff, b2 = (value & 0xff00) >> 2, b3 = (value & 0xff0000) >> 4;
-  dest[0] = b1 / 255.0f;
-  dest[1] = (b1 ^ b2) / 255.0f;
-  dest[2] = (b1 ^ b2 ^ b3) / 255.0f;
+  dest[0] = b1;
+  dest[1] = (b1 ^ b2);
+  dest[2] = (b1 ^ b3);
+}
+
+void
+p2tr_write_rgb_ppm (FILE            *f,
+                    guint8          *dest,
+                    P2trImageConfig *config)
+{
+  gint x, y;
+  guint8 *pixel;
+
+  fprintf (f, "P3\n");
+  fprintf (f, "%d %d\n", config->x_samples, config->y_samples);
+  fprintf (f, "255\n");
+
+  pixel = dest;
+
+  for (y = 0; y < config->y_samples; y++)
+    {
+      for (x = 0; x < config->x_samples; x++)
+        {
+          if (pixel[3] <= 0.5)
+            fprintf (f, "  0   0   0");
+          else
+            fprintf (f, "%3d %3d %3d", pixel[0], pixel[1], pixel[2]);
+
+          if (x != config->x_samples - 1)
+            fprintf (f, "   ");
+
+          pixel += 4;
+        }
+      fprintf (f, "\n");
+    }
 }
 
 gint main (int argc, char *argv[])
@@ -199,6 +306,8 @@ gint main (int argc, char *argv[])
   GOptionContext *context;
 
   GPtrArray *pts;
+  GPtrArray *ptsH;
+  GPtrArray *ptsS;
   GArray    *colors;
 
   P2tCDT *cdt;
@@ -258,9 +367,17 @@ gint main (int argc, char *argv[])
         }
     }
 
-  read_points_file (input_file, &pts, &colors);
+  read_points_file (input_file, &pts, &ptsH, &ptsS, &colors);
 
   cdt = p2t_cdt_new (pts);
+  if (ptsH->len > 0)
+    p2t_cdt_add_hole (cdt, ptsH);
+  if (ptsS->len > 0)
+    {
+    gint i;
+    for (i = 0; i < ptsS->len; i++)
+        p2t_cdt_add_point (cdt, point_index (ptsS, i));
+    }
   p2t_cdt_triangulate (cdt);
 
   rcdt = p2tr_cdt_new (cdt);
@@ -268,7 +385,7 @@ gint main (int argc, char *argv[])
 
   if (refine_max_steps > 0)
     {
-      g_print ("Refining the mesh!\n"); 
+      g_print ("Refining the mesh!\n");
       refiner = p2tr_refiner_new (G_PI / 6, p2tr_refiner_false_too_big, rcdt);
       p2tr_refiner_refine (refiner, refine_max_steps, NULL);
       p2tr_refiner_free (refiner);
@@ -284,27 +401,31 @@ gint main (int argc, char *argv[])
   if (render_mesh)
     {
       P2trImageConfig imc;
-      gfloat *im;
+      guint8 *im;
 
       g_print ("Rendering color interpolation!");
 
-      imc.cpp = 4;
-      imc.min_x = imc.min_y = 0;
-      imc.step_x = imc.step_y = 0.2;
-      imc.x_samples = imc.y_samples = 500;
+      imc.cpp = 3;
+      imc.min_x = min_x;
+      imc.min_y = min_y;
+      imc.step_x = (max_x - min_x) / ((gfloat) mesh_width - 1);
+      imc.step_y = (max_y - min_y) / ((gfloat) mesh_height - 1);
+      imc.x_samples = mesh_width;
+      imc.y_samples = mesh_height;
+      imc.alpha_last = TRUE;
 
-      im = g_new (gfloat, imc.cpp * imc.x_samples * imc.y_samples);
+      im = g_new (guint8, (1 + imc.cpp) * imc.x_samples * imc.y_samples);
 
-      p2tr_mesh_render_scanline (rcdt->mesh, im, &imc, test_point_to_color, NULL);
+      p2tr_mesh_render_b (rcdt->mesh, im, &imc, test_point_to_color, NULL);
 
-      p2tr_write_ppm (mesh_out, im, &imc);
+      p2tr_write_rgb_ppm (mesh_out, im, &imc);
       fclose (mesh_out);
 
       g_free (im);
     }
 
   p2tr_cdt_free (rcdt);
-  free_read_results (&pts, &colors);
+  free_read_results (&pts, &ptsH, &ptsS, &colors);
 
   return 0;
 }
