@@ -166,10 +166,12 @@ p2tr_triangle_remove (P2trTriangle *self)
   for (i = 0; i < 3; i++)
   {
     self->edges[i]->tri = NULL;
-    p2tr_triangle_unref (self);
-
     p2tr_edge_unref (self->edges[i]);
     self->edges[i] = NULL;
+    /* Although we lost reference to the triangle 3 rows above, we must
+     * not unref it untill here since we still use the struct until this
+     * line! */
+    p2tr_triangle_unref (self);
   }
 }
 
