@@ -132,15 +132,15 @@ p2tr_cdt_try_flip (P2trCDT   *self,
 
   AB = to_flip;
 
-  CA = p2tr_point_get_edge_to (C, A, FALSE);
-  AD = p2tr_point_get_edge_to (A, D, FALSE);
-  DB = p2tr_point_get_edge_to (D, B, FALSE);
-  BC = p2tr_point_get_edge_to (B, C, FALSE);
-
   /* Check if the quadriliteral ADBC is concave (because if it is, we
    * can't flip the edge) */
   if (p2tr_triangle_circumcircle_contains_point (AB->tri, &D->c) != P2TR_INCIRCLE_IN)
     return NULL;
+
+  CA = p2tr_point_get_edge_to (C, A, FALSE);
+  AD = p2tr_point_get_edge_to (A, D, FALSE);
+  DB = p2tr_point_get_edge_to (D, B, FALSE);
+  BC = p2tr_point_get_edge_to (B, C, FALSE);
 
   p2tr_edge_remove (AB);
 
