@@ -30,6 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* The file format:
+ * P <X> <Y> - Specify a Point (the default is that it belongs to the
+ *             outline). The second line in the file must be of this type!
+ * H <X> <Y> - Specify that all points from here on (including this one)
+ *             belong to a new Hole. This will stop only on the next 'H'
+ *             directive (which will create a new hole)
+ * S <X> <Y> - Specify a Steiner point. Can appear anywhere.
+ */
 #include <stdlib.h>
 #include <stdio.h>
 #include <glib.h>
@@ -42,7 +50,6 @@
 
 #include <string.h>
 
-
 static gint refine_max_steps = 1000;
 static gboolean debug_print = TRUE;
 static gboolean verbose = TRUE;
@@ -52,11 +59,6 @@ static gboolean render_mesh = FALSE;
 static gboolean render_svg = FALSE;
 static gint mesh_width = 100;
 static gint mesh_height = 100;
-
-static gfloat min_x = + G_MAXFLOAT;
-static gfloat min_y = + G_MAXFLOAT;
-static gfloat max_x = - G_MAXFLOAT;
-static gfloat max_y = - G_MAXFLOAT;
 
 static GOptionEntry entries[] =
 {
@@ -72,8 +74,20 @@ static GOptionEntry entries[] =
   { NULL }
 };
 
-typedef gfloat Color3f[3];
-typedef gfloat Point2f[2];
+typedef enum {
+  PTS_POINTS  = 'P',
+  PTS_HOLE    = 'H',
+  PTS_STEINER = 'S'
+} PtsFilePartType;
+
+typedef struct
+{
+  PtsFilePartType type;
+  union {
+    GPtrArray *points;
+    P2tPoint  *point;
+  } data;
+} PtsFilePart;
 
 /**
  * read_points_file:
@@ -82,18 +96,16 @@ typedef gfloat Point2f[2];
  *          here. NULL can be passed.
  * @param colors An pointer to an array of colors will be returned here. NULL can be
  *          passed.
- *
- *
  */
-void
-read_points_file (const gchar       *path,
-                  P2tPointPtrArray  *points,
-                  P2tPointPtrArray  *pointsH,
-                  P2tPointPtrArray  *pointsS,
-                  GArray           **colors)
+GQueue*
+read_points_file (const gchar       *path)
 {
+  int line;
   FILE *f = fopen (path, "r");
-  gint countPts = 0, countPtsH = 0, countPtsS = 0, countCls = 0;
+
+  PtsFilePart *current_part, *temp_part;
+  GPtrArray   *current_points;
+  GQueue      *file_parts = g_queue_new ();
 
   if (f == NULL)
     {
@@ -104,150 +116,101 @@ read_points_file (const gchar       *path,
   if (verbose)
     g_print ("Now parsing \"%s\"\n", path);
 
-  if (points != NULL) *points = g_ptr_array_new ();
-  if (pointsH != NULL) *pointsH = g_ptr_array_new ();
-  if (pointsS != NULL) *pointsS = g_ptr_array_new ();
-  if (colors != NULL) *colors = g_array_new (FALSE, FALSE, sizeof (Color3f));
+  current_part = g_slice_new (PtsFilePart);
+  current_part->type = PTS_POINTS;
+  current_points = current_part->data.points = g_ptr_array_new ();
+  g_queue_push_tail (file_parts, current_part);
 
-  if (debug_print && points == NULL) g_print ("Points will not be kept\n");
-  if (debug_print && pointsH == NULL) g_print ("Points Hole will not be kept\n");
-  if (debug_print && pointsS == NULL) g_print ("A steiner point will not be kept\n");
-  if (debug_print && colors == NULL) g_print ("Colors will not be kept\n");
+  line = 0;
 
   while (! feof (f))
     {
-      Color3f col = { 0, 0, 0 };
-      Point2f ptc = { 0, 0 };
-      Point2f pth = { 0, 0 };
-      Point2f pts = { 0, 0 };
-      gboolean foundCol = FALSE, foundPt = FALSE, foundPtH = FALSE, foundPtS = FALSE;
+      char type;
+      float x, y;
+      int read_size;
+      gboolean error = FALSE;
 
-      /* Read only while we have valid points */
-      gint readSize = fscanf (f, "@ %f %f ", &ptc[0], &ptc[1]);
+      ++line;
 
-      if (readSize > 0)
+      read_size = fscanf (f, " %[a-zA-Z]", &type);
+
+      if (read_size != 1)
         {
-          if (readSize != 2)
-            {
-              g_error ("Error! %d is an unexpected number of floats after point '@' declaration!\n", readSize);
-              exit (1);
-            }
-
-          foundPt = TRUE;
-
-          if (points != NULL)
-            {
-              g_ptr_array_add (*points, p2t_point_new_dd (ptc[0], ptc[1]));
-              min_x = MIN(ptc[0], min_x);
-              min_y = MIN(ptc[1], min_y);
-              max_x = MAX(ptc[0], max_x);
-              max_y = MAX(ptc[1], max_y);
-              countPts++;
-            }
+          g_error ("Expected a command type!");
+          exit (1);
         }
 
-      readSize = fscanf (f, "& %f %f ", &pth[0], &pth[1]);
-
-      if (readSize > 0)
+      switch (type)
         {
-          if (readSize != 2)
-            {
-              g_error ("Error! %d is an unexpected number of floats after point '&' declaration!\n", readSize);
-              exit (1);
-            }
+          case PTS_HOLE:
+            if (verbose) g_print ("Found a hole on directive %d\n", line);
+            current_part = g_slice_new (PtsFilePart);
+            current_part->type = PTS_HOLE;
+            current_points = current_part->data.points = g_ptr_array_new ();
+            g_queue_push_tail (file_parts, current_part);
+            /* Intentionally no break! */
 
-          foundPtH = TRUE;
+          case PTS_POINTS:
+            read_size = fscanf (f, "%f %f", &x, &y);
+            if ((error = (read_size != 2))) break;
+            g_ptr_array_add (current_points, p2t_point_new_dd (x, y));
+            break;
 
-          if (pointsH != NULL)
-            {
-              g_ptr_array_add (*pointsH, p2t_point_new_dd (pth[0], pth[1]));
-              countPtsH++;
-            }
+          case PTS_STEINER:
+            if (verbose) g_print ("Found a steiner point on directive %d\n", line);
+            temp_part = g_slice_new (PtsFilePart);
+            temp_part->type = PTS_STEINER;
+            g_queue_push_tail (file_parts, temp_part);
+            read_size = fscanf (f, "%f %f", &x, &y);
+            if ((error = (read_size != 2))) break;
+            temp_part->data.point = p2t_point_new_dd (x, y);
+            break;
+
+          default:
+            error = TRUE;
+            break;
         }
 
-      readSize = fscanf (f, "* %f %f ", &pts[0], &pts[1]);
-
-      if (readSize > 0)
+      if (error)
         {
-          if (readSize != 2)
-            {
-              g_error ("Error! %d is an unexpected number of floats after point '*' declaration!\n", readSize);
-              exit (1);
-            }
-
-          foundPtS = TRUE;
-
-          if (pointsS != NULL)
-            {
-              g_ptr_array_add (*pointsS, p2t_point_new_dd (pts[0], pts[1]));
-              countPtsS++;
-            }
+          g_error ("Bad directive number %d!", line);
+          exit (1);
         }
 
-     readSize = fscanf (f, "# %f %f %f ", &col[0], &col[1], &col[2]);
-
-     if (readSize > 0)
-       {
-          if (readSize != 1 && readSize != 3)
-            {
-              g_error ("Error! %d is an unexpected number of floats after color '#' declaration!\n", readSize);
-              exit (1);
-            }
-
-          foundCol = TRUE;
-
-          /* Did we read Gray color information? */
-          if (readSize == 1)
-            col[1] = col[2] = col[0];
-
-          if (colors != NULL)
-            {
-              g_array_append_val (*colors, ptc);
-              countCls++;
-            }
-       }
-
-     if (!foundCol && !foundPt && !foundPtH && !foundPtS)
-       break;
+      /* Consume additional spaces, to detect EOF properly */
+      read_size = fscanf (f, " ");
     }
 
   fclose (f);
 
-  if (verbose)
-    g_print ("Read %d points, %d points hole, %d a steiner points and %d colors\n", countPts, countPtsH, countPtsS, countCls);
+  return file_parts;
 }
 
 void
-free_read_results (P2tPointPtrArray  *points,
-                   P2tPointPtrArray  *pointsH,
-                   P2tPointPtrArray  *pointsS,
-                   GArray           **colors)
+free_read_results (GQueue *file_parts)
 {
-  gint i;
-
-  if (points != NULL)
+  while (! g_queue_is_empty (file_parts))
     {
-      for (i = 0; i < (*points)->len; i++)
-        p2t_point_free (point_index (*points, i));
-      g_ptr_array_free (*points, TRUE);
-    }
+      PtsFilePart *temp = (PtsFilePart*) g_queue_pop_head (file_parts);
+      GPtrArray *pts;
+      gint i;
+      switch (temp->type)
+        {
+          case PTS_HOLE:
+          case PTS_POINTS:
+            pts = temp->data.points;
+            for (i = 0; i < pts->len; ++i)
+              p2t_point_free (point_index (pts, i));
+            g_ptr_array_free (pts, TRUE);
+            break;
 
-  if (pointsH != NULL)
-    {
-      for (i = 0; i < (*pointsH)->len; i++)
-        p2t_point_free (point_index (*pointsH, i));
-      g_ptr_array_free (*pointsH, TRUE);
+          case PTS_STEINER:
+            p2t_point_free (temp->data.point);
+            break;
+        }
+      g_slice_free (PtsFilePart, temp);
     }
-
-  if (pointsS != NULL)
-    {
-      for (i = 0; i < (*pointsS)->len; i++)
-        p2t_point_free (point_index (*pointsS, i));
-      g_ptr_array_free (*pointsS, TRUE);
-    }
-
-  if (colors != NULL)
-    g_array_free (*colors, TRUE);
+  g_queue_free (file_parts);
 }
 
 /* Calculate a "deterministic random" color for each point
@@ -305,10 +268,9 @@ gint main (int argc, char *argv[])
   GError *error = NULL;
   GOptionContext *context;
 
-  GPtrArray *pts;
-  GPtrArray *ptsH;
-  GPtrArray *ptsS;
-  GArray    *colors;
+  GQueue *pts_parts;
+  GList *pts_iter;
+  PtsFilePart *cur_part;
 
   P2tCDT *cdt;
   P2trCDT *rcdt;
@@ -367,17 +329,51 @@ gint main (int argc, char *argv[])
         }
     }
 
-  read_points_file (input_file, &pts, &ptsH, &ptsS, &colors);
+  pts_parts = read_points_file (input_file);
 
-  cdt = p2t_cdt_new (pts);
-  if (ptsH->len > 0)
-    p2t_cdt_add_hole (cdt, ptsH);
-  if (ptsS->len > 0)
+  for (pts_iter = pts_parts->head; pts_iter != NULL; pts_iter = pts_iter->next)
     {
-    gint i;
-    for (i = 0; i < ptsS->len; i++)
-        p2t_cdt_add_point (cdt, point_index (ptsS, i));
+      cur_part = (PtsFilePart*) pts_iter->data;
+      switch (cur_part->type)
+        {
+          case PTS_POINTS:
+          case PTS_HOLE:
+            if (cur_part->data.points->len < 3)
+              {
+                g_error ("Expected at least 3 points in eahc point sequence!");
+                exit (1);
+              }
+            break;
+
+          default:
+            break;
+        }
     }
+
+  pts_iter = pts_parts->head;
+  cdt = p2t_cdt_new (((PtsFilePart*)pts_iter->data)->data.points);
+  for (pts_iter = pts_iter->next; pts_iter != NULL; pts_iter = pts_iter->next)
+    {
+      cur_part = (PtsFilePart*) pts_iter->data;
+      switch (cur_part->type)
+        {
+          case PTS_STEINER:
+            p2t_cdt_add_point (cdt, cur_part->data.point);
+            break;
+
+          case PTS_HOLE:
+            p2t_cdt_add_hole (cdt, cur_part->data.points);
+            break;
+
+          case PTS_POINTS:
+            g_assert_not_reached ();
+            break;
+
+          default:
+            break;
+        }
+    }
+
   p2t_cdt_triangulate (cdt);
 
   rcdt = p2tr_cdt_new (cdt);
@@ -402,8 +398,11 @@ gint main (int argc, char *argv[])
     {
       P2trImageConfig imc;
       guint8 *im;
+      gdouble min_x, min_y, max_x, max_y;
 
       g_print ("Rendering color interpolation!");
+
+      p2tr_mesh_get_bounds (rcdt->mesh, &min_x, &min_y, &max_x, &max_y);
 
       imc.cpp = 3;
       imc.min_x = min_x;
@@ -425,7 +424,7 @@ gint main (int argc, char *argv[])
     }
 
   p2tr_cdt_free (rcdt);
-  free_read_results (&pts, &ptsH, &ptsS, &colors);
+  free_read_results (pts_parts);
 
   return 0;
 }
