@@ -39,143 +39,166 @@
 
 #include "svg-plot.h"
 
+#define P2TR_SVG_NEWLINE "\n"
+
 void
-p2tr_plot_svg_plot_group_start (const gchar *Name, FILE *outfile)
+p2tr_render_svg_init (FILE              *out,
+                      const P2trVector2 *bottom_left,
+                      const P2trVector2 *top_right)
 {
-  if (Name == NULL)
-    fprintf (outfile, "<g>" "\n");
-  else
-    fprintf (outfile, "<g name=\"%s\">" "\n", Name);
+  gdouble real_width = top_right->x - bottom_left->x;
+  gdouble real_height = top_right->y - bottom_left->y;
+
+  /* Begin with the header of the document */
+  fprintf (out, "<?xml version=\"1.0\" standalone=\"no\"?>%s",
+      P2TR_SVG_NEWLINE);
+  fprintf (out, "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"%s",
+      P2TR_SVG_NEWLINE);
+  fprintf (out, "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">%s",
+      P2TR_SVG_NEWLINE);
+
+  fprintf (out, "<svg xmlns=\"http://www.w3.org/2000/svg\""
+                "     version=\"1.1\"%s", P2TR_SVG_NEWLINE);
+
+  fprintf (out, "     viewBox=\"%f %f %f %f\"%s",
+      + bottom_left->x, - (bottom_left->y + real_height),
+      + real_width,     + real_height,
+      P2TR_SVG_NEWLINE);
+
+  fprintf (out, "     preserveAspectRatio=\"xMidYMid meet\"%s",
+      P2TR_SVG_NEWLINE);
+
+  /* Close the SVG tag */
+  fprintf (out, ">%s", P2TR_SVG_NEWLINE);
+
+  fprintf (out, "<g transform=\"scale(1,-1)\">%s",
+      P2TR_SVG_NEWLINE);
 }
 
 void
-p2tr_plot_svg_plot_group_end (FILE *outfile)
+p2tr_render_svg_finish (FILE *out)
 {
-  fprintf (outfile, "</g>" "\n");
+  fprintf (out, "</g>%s", P2TR_SVG_NEWLINE);
+  fprintf (out, "</svg>%s", P2TR_SVG_NEWLINE);
+}
+
+static void
+p2tr_render_svg_style (FILE           *out,
+                       P2trSVGContext *context,
+                       gboolean        no_fill)
+{
+  fprintf (out, "style=\"");
+    {
+      if (context->stroke)
+        {
+          fprintf (out, "stroke: #%02x%02x%02x; stroke-opacity: %f; ",
+              context->stroke_color[0], context->stroke_color[1],
+              context->stroke_color[2], context->stroke_color[3] / 255.0);
+          fprintf (out, "stroke-:width: %f; stroke-linejoin: round; ",
+              context->stroke_width);
+        }
+
+      if (context->fill && ! no_fill)
+        fprintf (out, "fill: #%02x%02x%02x; fill-opacity: %f; ",
+            context->fill_color[0], context->fill_color[1],
+            context->fill_color[2], context->fill_color[3] / 255.0);
+
+      if (context->opacity != 1)
+        fprintf (out, "opacity: %f; ", context->opacity);
+    }
+  fprintf (out, "\"");
 }
 
 void
-p2tr_plot_svg_plot_line (gdouble x1, gdouble y1, gdouble x2, gdouble y2, const gchar *color, FILE *outfile)
+p2tr_render_svg_draw_line (FILE              *out,
+                           P2trSVGContext    *context,
+                           const P2trVector2 *start,
+                           const P2trVector2 *end)
 {
-  fprintf (outfile, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\"" "\n", x1, y1, x2, y2);
-  fprintf (outfile, "style=\"stroke: %s; stroke-width: %f\" />" "\n", color, PLOT_LINE_WIDTH);
-  fprintf (outfile, "" "\n");
+  fprintf (out, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" ",
+      start->x, start->y, end->x, end->y);
+  p2tr_render_svg_style (out, context, TRUE);
+  fprintf (out, " />%s", P2TR_SVG_NEWLINE);
 }
 
 void
-p2tr_plot_svg_plot_arrow (gdouble x1, gdouble y1, gdouble x2, gdouble y2, const gchar* color, FILE *outfile)
+p2tr_render_svg_draw_triangle (FILE              *out,
+                               P2trSVGContext    *context,
+                               const P2trVector2 *p1,
+                               const P2trVector2 *p2,
+                               const P2trVector2 *p3)
 {
-  gdouble dy = y2 - y1;
-  gdouble dx = x2 - x1;
-  gdouble angle = atan2 (dy, dx);
-  gdouble temp = angle - ARROW_SIDE_ANGLE;
-
-  p2tr_plot_svg_plot_line (x1, y1, x2, y2, color, outfile);
-
-  p2tr_plot_svg_plot_line (x2, y2, x2 - ARROW_HEAD_SIZE * cos (temp), y2 - ARROW_HEAD_SIZE * sin (temp), color, outfile);
-
-  temp = angle + ARROW_SIDE_ANGLE;
-  p2tr_plot_svg_plot_line (x2, y2, x2 - ARROW_HEAD_SIZE * cos (temp), y2 - ARROW_HEAD_SIZE * sin (temp), color, outfile);
+  fprintf (out, "<polygon points=\"%f,%f %f,%f %f,%f\" ",
+      p1->x, p1->y, p2->x, p2->y, p3->x, p3->y);
+  p2tr_render_svg_style (out, context, FALSE);
+  fprintf (out, " />%s", P2TR_SVG_NEWLINE);
 }
 
 void
-p2tr_plot_svg_fill_triangle (gdouble x1, gdouble y1, gdouble x2, gdouble y2, gdouble x3, gdouble y3, const gchar *color, FILE *outfile)
+p2tr_render_svg_draw_circle (FILE              *out,
+                             P2trSVGContext    *context,
+                             const P2trVector2 *center,
+                             gdouble            radius)
 {
-  fprintf (outfile, "<polyline points=\"%f,%f %f,%f %f,%f\"" "\n", x1, y1, x2, y2, x3, y3);
-  fprintf (outfile, "style=\"fill: %s\" />" "\n", color);
-  fprintf (outfile, "" "\n");
+  fprintf (out, "<circle cx=\"%f\" cy=\"%f\" r=\"%f\" ",
+      center->x, center->y, radius);
+  p2tr_render_svg_style (out, context, FALSE);
+  fprintf (out, " />%s", P2TR_SVG_NEWLINE);
 }
 
 void
-p2tr_plot_svg_fill_point (gdouble x1, gdouble y1, const gchar* color, FILE *outfile)
-{
-  fprintf (outfile, "<circle cx=\"%f\" cy=\"%f\" r=\"%f\"" "\n", x1, y1, MAX (1, PLOT_LINE_WIDTH));
-  fprintf (outfile, "style=\"fill: %s; stroke: none\" />" "\n", color);
-  fprintf (outfile, "" "\n");
-}
-
-void
-p2tr_plot_svg_plot_circle (gdouble xc, gdouble yc, gdouble R, const gchar* color, FILE *outfile)
-{
-  fprintf (outfile, "<circle cx=\"%f\" cy=\"%f\" r=\"%f\"" "\n", xc, yc, R);
-  fprintf (outfile, "style=\"stroke: %s; stroke-width: %f; fill: none\" />" "\n", color, PLOT_LINE_WIDTH);
-  fprintf (outfile, "" "\n");
-}
-
-void
-p2tr_plot_svg_plot_end (FILE *outfile)
-{
-  fprintf (outfile, "</g>" "\n");
-  fprintf (outfile, "</svg>" "\n");
-}
-
-void
-p2tr_plot_svg_plot_init (FILE *outfile)
-{
-  fprintf (outfile, "<?xml version=\"1.0\" standalone=\"no\"?>" "\n");
-  fprintf (outfile, "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"" "\n");
-  fprintf (outfile, "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">" "\n");
-  fprintf (outfile, "<svg width=\"100%%\" height=\"100%%\" version=\"1.1\"" "\n");
-  fprintf (outfile, "xmlns=\"http://www.w3.org/2000/svg\">" "\n");
-  fprintf (outfile, "" "\n");
-  fprintf (outfile, "<defs>" "\n");
-  fprintf (outfile, "  <marker id=\"arrow\" viewBox=\"0 0 10 10\" refX=\"10\" refY=\"5\"" "\n");
-  fprintf (outfile, "     markerUnits=\"strokeWidth\" orient=\"auto\"" "\n");
-  fprintf (outfile, "     markerWidth=\"12\" markerHeight=\"9\">" "\n");
-  fprintf (outfile, "" "\n");
-  fprintf (outfile, "     <polyline points=\"0,0 10,5 0,10\" fill=\"none\" stroke-width=\"2px\" stroke=\"inherit\" />" "\n");
-  fprintf (outfile, "  </marker>" "\n");
-  fprintf (outfile, "</defs>" "\n");
-  fprintf (outfile, "" "\n");
-  fprintf (outfile, "<g transform=\"translate(%f,%f)  scale(%f,-%f)\">" "\n", X_TRANSLATE, Y_TRANSLATE, X_SCALE, Y_SCALE);
-
-  p2tr_plot_svg_plot_arrow (-20, 0, 100, 0, "black", outfile);
-  p2tr_plot_svg_plot_arrow (0, -20, 0, 100, "black", outfile);
-}
-
-void
-p2tr_plot_svg_plot_edge (P2trEdge *self, const gchar* color, FILE* outfile)
-{
-  gdouble x1 = P2TR_EDGE_START (self)->c.x;
-  gdouble y1 = P2TR_EDGE_START (self)->c.y;
-  gdouble x2 = self->end->c.x;
-  gdouble y2 = self->end->c.y;
-
-  p2tr_plot_svg_plot_line (x1, y1, x2, y2, color, outfile);
-
-#if FALSE
-  if (p2tr_edge_is_encroached (self))
-    p2tr_plot_svg_plot_circle ((x1 + x2) / 2, (y1 + y2) / 2, R, "red", outfile);
-#endif
-}
-
-void
-p2tr_plot_svg_plot_triangle (P2trTriangle *self, const gchar* color, FILE* outfile)
-{
-  P2trCircle c;
-  p2tr_triangle_get_circum_circle (self, &c);
-  p2tr_plot_svg_plot_edge (self->edges[0], color, outfile);
-  p2tr_plot_svg_plot_edge (self->edges[1], color, outfile);
-  p2tr_plot_svg_plot_edge (self->edges[2], color, outfile);
-  p2tr_plot_svg_plot_circle (c.center.x, c.center.y, c.radius, "green", outfile);
-  p2tr_plot_svg_fill_point (self->edges[0]->end->c.x, self->edges[0]->end->c.y, "blue", outfile);
-  p2tr_plot_svg_fill_point (self->edges[1]->end->c.x, self->edges[1]->end->c.y, "blue", outfile);
-  p2tr_plot_svg_fill_point (self->edges[2]->end->c.x, self->edges[2]->end->c.y, "blue", outfile);
-}
-
-void
-p2tr_plot_svg (P2trMesh *T, FILE *outfile)
+p2tr_render_svg (P2trMesh *mesh,
+                 FILE     *out)
 {
   P2trHashSetIter  siter;
   P2trTriangle    *tr;
+  P2trPoint       *pt;
 
-  g_debug ("Starting to write SVG output\n");
-  p2tr_plot_svg_plot_init (outfile);
+  /* Colors taken from the Tango Icon Theme color palette */
+  P2trSVGContext  TRI = {
+      TRUE,
+      1,
+      /* Sky Blue 3 */
+      { 32, 74, 135, 255 },
+      TRUE,
+      /* Sky Blue 1 */
+      { 114, 159, 207, 255 },
+      1
+  };
 
-  p2tr_hash_set_iter_init (&siter, T->triangles);
+  P2trSVGContext PT = {
+      FALSE,
+      0,
+      /* Orange 3 */
+      { 206, 92, 0, 1 },
+      TRUE,
+      /* Orange 1 */
+      { 245, 121, 0, 255 },
+      1
+  };
+
+  P2trVector2 bottom_left, top_right;
+
+  p2tr_mesh_get_bounds (mesh,
+      &bottom_left.x, &bottom_left.y,
+      &top_right.x,   &top_right.y);
+
+  bottom_left.x -= 10;
+  bottom_left.y -= 10;
+  top_right.x += 10;
+  top_right.y += 10;
+  p2tr_render_svg_init (out, &bottom_left, &top_right);
+
+  p2tr_hash_set_iter_init (&siter, mesh->triangles);
   while (p2tr_hash_set_iter_next (&siter, (gpointer*)&tr))
-    p2tr_plot_svg_plot_triangle (tr, "black", outfile);
+    p2tr_render_svg_draw_triangle (out, &TRI,
+        &P2TR_TRIANGLE_GET_POINT(tr, 0)->c,
+        &P2TR_TRIANGLE_GET_POINT(tr, 1)->c,
+        &P2TR_TRIANGLE_GET_POINT(tr, 2)->c);
 
-  p2tr_plot_svg_plot_end (outfile);
-  g_debug ("Finished writing SVG output\n");
+  p2tr_hash_set_iter_init (&siter, mesh->points);
+  while (p2tr_hash_set_iter_next (&siter, (gpointer*)&pt))
+    p2tr_render_svg_draw_circle (out, &PT, &pt->c, 1);
+
+  p2tr_render_svg_finish (out);
 }

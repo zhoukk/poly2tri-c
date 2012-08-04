@@ -394,7 +394,7 @@ gint main (int argc, char *argv[])
   if (render_svg)
     {
       g_print ("Rendering SVG outline!");
-      p2tr_plot_svg (rcdt->mesh, svg_out);
+      p2tr_render_svg (rcdt->mesh, svg_out);
       fclose (svg_out);
     }
 

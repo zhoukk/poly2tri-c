@@ -35,51 +35,41 @@
 
 #include <poly2tri-c/refine/refine.h>
 
-#define PLOT_LINE_WIDTH 0.40
-#define ARROW_SIDE_ANGLE (G_PI / 180 * 30)
-#define ARROW_HEAD_SIZE 2.0
+typedef guint8 P2trSVGColor[4];
 
-#define X_SCALE 1.
-#define Y_SCALE 1.
-#define X_TRANSLATE 500.
-#define Y_TRANSLATE 500.
+typedef struct
+{
+  gboolean     stroke;
+  gdouble      stroke_width;
+  P2trSVGColor stroke_color;
+  gboolean     fill;
+  P2trSVGColor fill_color;
+  gdouble      opacity;
+} P2trSVGContext;
 
-void
-p2tr_plot_svg_plot_group_start (const gchar *Name, FILE* outfile);
+void p2tr_render_svg_init          (FILE              *out,
+                                    const P2trVector2 *bottom_left,
+                                    const P2trVector2 *top_right);
 
-void
-p2tr_plot_svg_plot_group_end (FILE* outfile);
+void p2tr_render_svg_draw_line     (FILE              *out,
+                                    P2trSVGContext    *context,
+                                    const P2trVector2 *start,
+                                    const P2trVector2 *end);
 
-void
-p2tr_plot_svg_plot_line (gdouble x1, gdouble y1, gdouble x2, gdouble y2, const gchar *color, FILE* outfile);
+void p2tr_render_svg_draw_triangle (FILE              *out,
+                                    P2trSVGContext    *context,
+                                    const P2trVector2 *p1,
+                                    const P2trVector2 *p2,
+                                    const P2trVector2 *p3);
 
-void
-p2tr_plot_svg_plot_arrow (gdouble x1, gdouble y1, gdouble x2, gdouble y2, const gchar* color, FILE* outfile);
+void p2tr_render_svg_draw_circle   (FILE              *out,
+                                    P2trSVGContext    *context,
+                                    const P2trVector2 *center,
+                                    gdouble            radius);
 
-void
-p2tr_plot_svg_fill_triangle (gdouble x1, gdouble y1, gdouble x2, gdouble y2, gdouble x3, gdouble y3, const gchar *color, FILE* outfile);
+void p2tr_render_svg_finish        (FILE              *out);
 
-void
-p2tr_plot_svg_fill_point (gdouble x1, gdouble y1, const gchar* color, FILE* outfile);
-
-void
-p2tr_plot_svg_plot_circle (gdouble xc, gdouble yc, gdouble R, const gchar* color, FILE* outfile);
-
-void
-p2tr_plot_svg_plot_end (FILE* outfile);
-
-void
-p2tr_plot_svg_plot_init (FILE* outfile);
-
-void
-p2tr_plot_svg_plot_edge (P2trEdge *self, const gchar* color, FILE* outfile);
-
-void
-p2tr_plot_svg_plot_triangle (P2trTriangle *self, const gchar* color, FILE* outfile);
-
-#define r() (10+(rand () % 91))
-
-void
-p2tr_plot_svg (P2trMesh *T, FILE* outfile);
+void p2tr_render_svg               (P2trMesh          *mesh,
+                                    FILE              *out);
 
 #endif

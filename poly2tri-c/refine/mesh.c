@@ -374,3 +374,33 @@ p2tr_mesh_find_point_local2 (P2trMesh          *self,
 
   return result;
 }
+
+void
+p2tr_mesh_get_bounds (P2trMesh    *self,
+                      gdouble     *min_x,
+                      gdouble     *min_y,
+                      gdouble     *max_x,
+                      gdouble     *max_y)
+{
+  gdouble lmin_x = + G_MAXDOUBLE, lmin_y = + G_MAXDOUBLE;
+  gdouble lmax_x = - G_MAXDOUBLE, lmax_y = - G_MAXDOUBLE;
+
+  P2trHashSetIter iter;
+  P2trPoint *pt;
+
+  p2tr_hash_set_iter_init (&iter, self->points);
+  while (p2tr_hash_set_iter_next (&iter, (gpointer*) &pt))
+    {
+      gdouble x = pt->c.x;
+      gdouble y = pt->c.y;
+
+      lmin_x = MIN (lmin_x, x);
+      lmin_y = MIN (lmin_y, y);
+      lmax_x = MAX (lmax_x, x);
+      lmax_y = MAX (lmax_y, y);
+    }
+  *min_x = lmin_x;
+  *min_y = lmin_y;
+  *max_x = lmax_x;
+  *max_y = lmax_y;
+}

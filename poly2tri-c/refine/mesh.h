@@ -344,5 +344,18 @@ P2trTriangle* p2tr_mesh_find_point_local2 (P2trMesh *self,
                                            gdouble *u,
                                            gdouble *v);
 
+/**
+ * Find the bounding rectangle containing this mesh.
+ * @param[in] self The mesh whose bounding rectangle should be computed
+ * @param[out] min_x The minimal X coordinate of the mesh
+ * @param[out] min_y The minimal Y coordinate of the mesh
+ * @param[out] max_x The maximal X coordinate of the mesh
+ * @param[out] max_y The maximal Y coordinate of the mesh
+ */
+void          p2tr_mesh_get_bounds        (P2trMesh    *self,
+                                           gdouble     *min_x,
+                                           gdouble     *min_y,
+                                           gdouble     *max_x,
+                                           gdouble     *max_y);
 /** @} */
 #endif
