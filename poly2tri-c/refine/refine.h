@@ -42,6 +42,8 @@
 #include "bounded-line.h"
 #include "pslg.h"
 
+#include "triangulation.h"
+
 #include "point.h"
 #include "edge.h"
 #include "triangle.h"

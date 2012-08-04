@@ -33,8 +33,8 @@
 #ifndef __P2TR_RENDER_MESH_RENDER_H__
 #define __P2TR_RENDER_MESH_RENDER_H__
 
-#include <stdio.h>
 #include <glib.h>
+#include <poly2tri-c/refine/refine.h>
 
 /**
  * A struct containing the necessary information to render a "color
@@ -63,14 +63,30 @@ typedef struct {
   gboolean alpha_last;
 } P2trImageConfig;
 
+/**
+ * A function that maps mesh points into colors
+ * @param point The mesh point
+ * @param dest The destination buffer for the color components, where
+ *        each component is one unsigned byte (guint8)
+ * @param user_data Custom data passed as a pointer to the function
+ */
 typedef void (*P2trPointToColorFuncB)   (P2trPoint            *point,
                                          guint8               *dest,
                                          gpointer              user_data);
 
+/**
+ * Similar to @ref P2trPointToColorFuncB, but with floating point data
+ * types for each color component
+ */
 typedef void (*P2trPointToColorFuncF)   (P2trPoint            *point,
                                          gfloat               *dest,
                                          gpointer              user_data);
 
+/**
+ * A generalization of all the point-to-color functions. This is used
+ * only for type casting inside the library and should not be used
+ * externally.
+ */
 typedef void (*P2trPointToColorFuncC)   (P2trPoint            *point,
                                          void                 *dest,
                                          gpointer              user_data);
@@ -105,26 +121,51 @@ void   p2tr_mesh_render_cache_uvt_exact (P2trMesh             *mesh,
                                          gint                  dest_len,
                                          P2trImageConfig      *config);
 
+/**
+ * Render a mesh using a UVT cache that was computed for the given
+ * area, together with a point-to-color function.
+ * @param uvt_cache A cache for the given area, computed with
+ *        @ref p2tr_mesh_render_cache_uvt_exact
+ * @param dest The destination buffer for the image
+ * @param dest_len How many pixels to render from the area. The cache
+ *        should contain data for at least this many pixels!
+ * @param config The render configuration struct
+ * @param pt2col A function that receives points in the mesh and returns
+ *        colors. The returned colors should have config->cpp components
+ * @param pt2col_user_data Custom data to pass to @ref pt2col
+ */
 void   p2tr_mesh_render_from_cache_f    (P2trUVT               *uvt_cache,
                                          gfloat                *dest,
-                                         gint                   n,
+                                         gint                   dest_len,
                                          P2trImageConfig       *config,
                                          P2trPointToColorFuncF  pt2col,
                                          gpointer               pt2col_user_data);
 
+/**
+ * Render a mesh with the given area and sampling configuration. Same
+ * as first caching @ref p2tr_mesh_render_cache_uvt and then calling
+ * @ref p2tr_mesh_render_cache_uvt_exact with the cache, and finally
+ * freeing the cache
+ */
 void   p2tr_mesh_render_f               (P2trMesh              *mesh,
                                          gfloat                *dest,
                                          P2trImageConfig       *config,
                                          P2trPointToColorFuncF  pt2col,
                                          gpointer               pt2col_user_data);
 
+/**
+ * See @ref p2tr_mesh_render_from_cache_f
+ */
 void   p2tr_mesh_render_from_cache_b    (P2trUVT               *uvt_cache,
                                          guint8                *dest,
-                                         gint                   n,
+                                         gint                   dest_len,
                                          P2trImageConfig       *config,
                                          P2trPointToColorFuncB  pt2col,
                                          gpointer               pt2col_user_data);
 
+/**
+ * See @ref p2tr_mesh_render_f
+ */
 void   p2tr_mesh_render_b               (P2trMesh              *mesh,
                                          guint8                *dest,
                                          P2trImageConfig       *config,
