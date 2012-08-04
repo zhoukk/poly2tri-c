@@ -142,7 +142,7 @@ p2tr_triangle_unref (P2trTriangle *self)
 void
 p2tr_triangle_free (P2trTriangle *self)
 {
-  p2tr_triangle_remove (self);
+  g_assert (p2tr_triangle_is_removed (self));
   g_slice_free (P2trTriangle, self);
 }
 

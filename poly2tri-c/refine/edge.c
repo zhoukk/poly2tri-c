@@ -72,8 +72,7 @@ p2tr_edge_new (P2trPoint *start,
   _p2tr_point_insert_edge (start, self);
   _p2tr_point_insert_edge (end,   mirror);
 
-  ++self->refcount;
-  return self;
+  return p2tr_edge_ref (self);
 }
 
 P2trEdge*
@@ -122,11 +121,27 @@ p2tr_edge_remove (P2trEdge *self)
       p2tr_mesh_unref (mesh); /* The get function reffed it */
     }
 
+  /* Warning - the code here is not that trivial!
+   * Assuming we would now want to remove `self' and `self->mirror' from
+   * `start' and `end'. If both have exactly one reference, then after
+   * removing the second, the edge struct will be freed before we can
+   * mark it as removed by setting the end points to be NULL! (Marking
+   * it as removed in that case, will be an access to unallocated
+   * memory).
+   * To solve this, we will hold a "ghost" reference to `self' to
+   * prevent freeing from happening until we are done modifying the
+   * struct.
+   */
+   p2tr_edge_ref (self);
+
   _p2tr_point_remove_edge(start, self);
   _p2tr_point_remove_edge(end, self->mirror);
 
   self->end = NULL;
   self->mirror->end = NULL;
+
+  /* Now release the "ghost" reference */
+  p2tr_edge_unref (self);
 
   p2tr_point_unref (start);
   p2tr_point_unref (end);
@@ -135,7 +150,7 @@ p2tr_edge_remove (P2trEdge *self)
 void
 p2tr_edge_free (P2trEdge *self)
 {
-  p2tr_edge_remove (self);
+  g_assert (p2tr_edge_is_removed (self));
   g_slice_free (P2trEdge, self->mirror);
   g_slice_free (P2trEdge, self);
 }
@@ -162,19 +177,20 @@ p2tr_edge_get_mesh (P2trEdge *self)
 }
 
 gdouble
-p2tr_edge_get_length(P2trEdge* self)
+p2tr_edge_get_length (P2trEdge* self)
 {
   return sqrt (p2tr_math_length_sq2 (&self->end->c, &P2TR_EDGE_START(self)->c));
 }
 
 gdouble
-p2tr_edge_get_length_squared(P2trEdge* self)
+p2tr_edge_get_length_squared (P2trEdge* self)
 {
   return p2tr_math_length_sq2 (&self->end->c, &P2TR_EDGE_START(self)->c);
 }
 
 gdouble
-p2tr_edge_angle_between(P2trEdge *e1, P2trEdge *e2)
+p2tr_edge_angle_between (P2trEdge *e1,
+                         P2trEdge *e2)
 {
   /* A = E1.angle, a = abs (A)
    * B = E1.angle, b = abs (B)
@@ -220,7 +236,8 @@ p2tr_edge_angle_between(P2trEdge *e1, P2trEdge *e2)
 }
 
 gdouble
-p2tr_edge_angle_between_positive (P2trEdge *e1, P2trEdge *e2)
+p2tr_edge_angle_between_positive (P2trEdge *e1,
+                                  P2trEdge *e2)
 {
   gdouble result = p2tr_edge_angle_between (e1, e2);
   if (result < 0)
