@@ -3,7 +3,7 @@
 m4_define([p2tc_major_version], [0])
 
 # Bump on new features and interface changes (feature releases)
-m4_define([p2tc_minor_version], [0])
+m4_define([p2tc_minor_version], [1])
 
 # Bump on revisions that do not break the interface (bug-fix releases)
 m4_define([p2tc_micro_version], [0])
@@ -18,7 +18,7 @@ m4_define([p2tc_api_version], [p2tc_major_version.p2tc_minor_version])
 
 # The version number of the currently implemented interface (bump on
 # every interface change)
-m4_define([lt_current], [0])
+m4_define([lt_current], [1])
 
 # The revision number of the current interface (reset to 0 on every
 # interface change)
@@ -28,7 +28,7 @@ m4_define([lt_revision], [0])
 # support all interfaces between current minus age and current.
 # Increment by 1 on every new feature addition
 # Reset to 0 if backwards compatiability is broken
-m4_define([lt_age], [0])
+m4_define([lt_age], [1])
 
 # Declare the package details
 AC_INIT([poly2tri-c],[p2tc_real_version],[lightningismyname@gmail.com])
