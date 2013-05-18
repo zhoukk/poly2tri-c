@@ -269,15 +269,24 @@ p2t_sweepcontext_remove_from_map (P2tSweepContext *THIS, P2tTriangle* triangle)
 void
 p2t_sweepcontext_mesh_clean (P2tSweepContext *THIS, P2tTriangle* triangle)
 {
+  GQueue triangles = G_QUEUE_INIT;
   int i;
-  if (triangle != NULL && !p2t_triangle_is_interior (triangle))
+
+  g_queue_push_tail (&triangles, triangle);
+
+  while (! g_queue_is_empty (&triangles))
     {
-      p2t_triangle_is_interior_b (triangle, TRUE);
-      g_ptr_array_add (THIS->triangles_, triangle);
-      for (i = 0; i < 3; i++)
+      P2tTriangle* t = (P2tTriangle*) g_queue_pop_tail (&triangles);
+
+      if (t != NULL && !p2t_triangle_is_interior (t))
         {
-          if (!triangle->constrained_edge[i])
-            p2t_sweepcontext_mesh_clean (THIS, p2t_triangle_get_neighbor (triangle, i));
+          p2t_triangle_is_interior_b (t, TRUE);
+          g_ptr_array_add (THIS->triangles_, t);
+          for (i = 0; i < 3; i++)
+            {
+              if (! t->constrained_edge[i])
+                g_queue_push_tail (&triangles, p2t_triangle_get_neighbor (t, i));
+            }
         }
     }
 }
