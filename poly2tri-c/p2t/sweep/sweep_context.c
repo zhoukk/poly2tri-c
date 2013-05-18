@@ -63,6 +63,15 @@ void
 p2t_sweepcontext_init (P2tSweepContext* THIS, P2tPointPtrArray polyline)
 {
   int i;
+
+  THIS->front_ = NULL;
+  THIS->head_ = NULL;
+  THIS->tail_ = NULL;
+
+  THIS->af_head_ = NULL;
+  THIS->af_middle_ = NULL;
+  THIS->af_tail_ = NULL;
+
   THIS->edge_list = g_ptr_array_new ();
   THIS->triangles_ = g_ptr_array_new ();
   THIS->map_ = NULL;
