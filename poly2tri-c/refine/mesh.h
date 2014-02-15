@@ -33,6 +33,7 @@
 #ifndef __P2TC_REFINE_MESH_H__
 #define __P2TC_REFINE_MESH_H__
 
+#include <stdio.h>
 #include <glib.h>
 #include "vector2.h"
 #include "utils.h"
@@ -357,5 +358,43 @@ void          p2tr_mesh_get_bounds        (P2trMesh    *self,
                                            gdouble     *min_y,
                                            gdouble     *max_x,
                                            gdouble     *max_y);
+
+/**
+ * Same as p2tr_mesh_save_to_file, but also opens the file at the
+ * specified path to be used as the target file
+ * @param[in] self The mesh to export
+ * @param[in] path The path of the file to export
+ * @return TRUE if exporting the mesh succeeded, FALSE otherwise
+ */
+gboolean      p2tr_mesh_save              (P2trMesh    *self,
+                                           const gchar *path);
+
+/**
+ * Export the mesh to a file in the Object File Format (.off),
+ * with 0 as the value of the Z coordinates
+ * @param[in] self The mesh to export
+ * @param[in] out The file into which the mesh should be exported
+ */
+void          p2tr_mesh_save_to_file      (P2trMesh *self,
+                                           FILE     *out);
+
+/**
+ * Load a 2D triangular mesh from an .off file (ignoring the Z
+ * coordinates of the points in the file)
+ * @param[in] path The file to load the mesh from
+ * @return The loaded mesh, or NULL if an error occurred while parsing
+ *         the file
+ */
+P2trMesh*     p2tr_mesh_load_from_file    (FILE     *in);
+
+/**
+ * Same as p2tr_mesh_load_from_file, but also opens the file at the
+ * specified path to load the mesh from it
+ * @param[in] path The path of the file to load the mesh from
+ * @return The loaded mesh, or NULL if an error occurred while parsing
+ *         the file
+ */
+P2trMesh*     p2tr_mesh_load              (const gchar *path);
+
 /** @} */
 #endif

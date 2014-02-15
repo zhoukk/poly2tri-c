@@ -404,3 +404,184 @@ p2tr_mesh_get_bounds (P2trMesh    *self,
   *max_x = lmax_x;
   *max_y = lmax_y;
 }
+
+void
+p2tr_mesh_save_to_file (P2trMesh *self,
+                        FILE     *out)
+{
+  guint point_count        = p2tr_hash_set_size (self->points);
+  guint triangle_count     = p2tr_hash_set_size (self->triangles);
+  guint edge_count_unused  = 0;
+
+  P2trPoint    *pt;
+  P2trTriangle *tr;
+  gfloat        z_value    = 0;
+
+  guint        pt_index;
+  GHashTable  *point2index;
+  guint       *indexes;
+  P2trHashSetIter siter;
+
+  /* Begin with the file header */
+  fprintf (out, "OFF %u %u %u\n", point_count, triangle_count,
+      edge_count_unused);
+
+  /* We would like point2index to maintain a mapping from a point to
+   * it's index in the file. However, we can't do this directly since
+   * a GHashTable stores gpointer values and we have no gaurantee that
+   * sizeof(guint) <= sizeof(gpointer). It is probably true in most
+   * architectures, but relying on it may cause some exotic bugs in
+   * architectures that do not satisfy this condition...
+   * So, we'll create an array of running indexes and then we'll store
+   * a reference to the index in the array.
+   */
+  indexes = g_new (guint, point_count);
+  point2index = g_hash_table_new (g_direct_hash, g_int_equal);
+
+  /* Now add a line for each point */
+  pt_index = 0;
+  p2tr_hash_set_iter_init (&siter, self->points);
+  while (p2tr_hash_set_iter_next (&siter, (gpointer*)&pt))
+    {
+      indexes[pt_index] = pt_index;
+      g_hash_table_insert (point2index, pt, &indexes[pt_index]);
+      fprintf (out, "%f %f %f\n", pt->c.x, pt->c.y, z_value);
+      pt_index++;
+    }
+
+  p2tr_hash_set_iter_init (&siter, self->triangles);
+  while (p2tr_hash_set_iter_next (&siter, (gpointer*)&tr))
+    {
+      guint* pt_indexes[3];
+      for (pt_index = 0; pt_index < 3; ++pt_index)
+        {
+          pt = P2TR_TRIANGLE_GET_POINT (tr, pt_index);
+          pt_indexes[pt_index] = g_hash_table_lookup (point2index, pt);
+        }
+
+      fprintf (out, "%u %u %u %u\n", 3,
+          *pt_indexes[0],*pt_indexes[1],  *pt_indexes[2]);
+    }
+
+  g_hash_table_destroy (point2index);
+  g_free (indexes);
+}
+
+gboolean
+p2tr_mesh_save (P2trMesh    *self,
+                const gchar *path)
+{
+  FILE *out = fopen (path, "w");
+  g_return_val_if_fail (out != NULL, FALSE);
+
+  p2tr_mesh_save_to_file (self, out);
+  fclose (out);
+  return TRUE;
+}
+
+P2trMesh*
+p2tr_mesh_load_from_file (FILE *in)
+{
+  guint point_count;
+  guint triangle_count;
+  guint edge_count_unused;
+
+  GPtrArray    *pts  = NULL;
+
+  P2trMesh     *mesh = NULL;
+  gfloat        x, y, z;
+
+  guint        i, j;
+  guint        pt_index;
+
+  gint         read_count;
+
+  /* Begin with the file header */
+  read_count = fscanf (in, "OFF %u %u %u\n", &point_count,
+      &triangle_count, &edge_count_unused);
+  g_return_val_if_fail (read_count == 3, NULL);
+
+  /* Initialize the mesh */
+  mesh = p2tr_mesh_new ();
+
+  /* Now read all the points */
+  pts = g_ptr_array_new_full (point_count,
+      (GDestroyNotify) p2tr_point_unref);
+  for (i = 0; i < point_count; ++i)
+    {
+      read_count = fscanf (in, "%f %f %f\n", &x, &y, &z);
+      if (read_count != 3)
+        goto error_finish;
+      g_ptr_array_add (pts, p2tr_mesh_new_point2 (mesh, x, y));
+    }
+
+  /* Now read all the triangles */
+  for (i = 0; i < triangle_count; ++i)
+    {
+      P2trPoint *points[3];
+      P2trEdge  *edges[3];
+      guint pt_indexes[3];
+      guint face_point_count;
+
+      read_count = fscanf (in, "%u", &face_point_count);
+      if (read_count != 1 || face_point_count != 3)
+        goto error_finish;
+
+      read_count = fscanf (in, "%u %u %u\n", &pt_indexes[0],
+          &pt_indexes[1], &pt_indexes[2]);
+
+      if (read_count != 3)
+        goto error_finish;
+
+      for (j = 0; j < 3; ++j)
+        {
+          pt_index = pt_indexes[j];
+          if (pt_index > point_count)
+            goto error_finish;
+          else
+            points[j] = (P2trPoint*) g_ptr_array_index (pts, pt_index);
+        }
+
+      for (j = 0; j < 3; ++j)
+        {
+          edges[j] = p2tr_mesh_new_or_existing_edge (mesh,
+              points[j], points[(j + 1) % 3], FALSE);
+        }
+
+      p2tr_triangle_unref (p2tr_mesh_new_triangle (mesh,
+          edges[0], edges[1], edges[2]));
+
+      for (j = 0; j < 3; ++j)
+          p2tr_edge_unref (edges[j]);
+    }
+
+  if (FALSE)
+    {
+error_finish:
+      if (mesh != NULL)
+        {
+          p2tr_mesh_unref (mesh);
+          mesh = NULL;
+        }
+    }
+
+  if (pts != NULL)
+    g_ptr_array_free (pts, TRUE);
+
+  return mesh;
+}
+
+P2trMesh*
+p2tr_mesh_load (const gchar *path)
+{
+  P2trMesh *result;
+
+  FILE *in = fopen (path, "r");
+  g_return_val_if_fail (in != NULL, NULL);
+
+  result = p2tr_mesh_load_from_file (in);
+
+  fclose (in);
+
+  return result;
+}
