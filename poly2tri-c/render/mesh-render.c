@@ -89,14 +89,16 @@ p2tr_mesh_render_cache_uvt_exact (P2trMesh        *T,
   tr_prev = uvt->tri;
   
   for (y = 0, pt.y = config->min_y; y < config->y_samples; ++y, pt.y += config->step_y)
-    for (x = 0, pt.x = config->min_x; x < config->x_samples; ++x, pt.x += config->step_x)
-      {
-        if (n-- == 0) return;
-        uvt->tri = p2tr_mesh_find_point_local2 (T, &pt, tr_prev, &uvt->u, &uvt->v);
-        if (uvt->tri) p2tr_triangle_unref (uvt->tri);
-        tr_prev = uvt->tri;
-        ++uvt;
-      }
+    {
+      for (x = 0, pt.x = config->min_x; x < config->x_samples; ++x, pt.x += config->step_x)
+        {
+          if (n-- == 0) return;
+          uvt->tri = p2tr_mesh_find_point_local2 (T, &pt, tr_prev, &uvt->u, &uvt->v);
+          if (uvt->tri) p2tr_triangle_unref (uvt->tri);
+          tr_prev = uvt->tri;
+          ++uvt;
+        }
+    }
 }
 
 #define P2TR_USE_BARYCENTRIC(u, v, A, B, C)                            \
