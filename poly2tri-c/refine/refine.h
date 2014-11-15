@@ -33,7 +33,7 @@
 #ifndef __P2TC_REFINE_H__
 #define __P2TC_REFINE_H__
 
-#include "utils.h"
+#include "rutils.h"
 #include "rmath.h"
 
 #include "vector2.h"
@@ -53,7 +53,7 @@
 #include "vtriangle.h"
 
 #include "cluster.h"
-#include "cdt.h"
+#include "rcdt.h"
 #include "refiner.h"
 
 #endif

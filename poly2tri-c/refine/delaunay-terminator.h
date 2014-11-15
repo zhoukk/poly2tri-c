@@ -34,7 +34,7 @@
 #define __P2TC_REFINE_DELAUNAY_TERMINATOR_H__
 
 #include <glib.h>
-#include "cdt.h"
+#include "rcdt.h"
 #include "refiner.h"
 #include "vedge.h"
 

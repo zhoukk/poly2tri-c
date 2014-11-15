@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __P2TC_REFINE_CDT_H__
-#define __P2TC_REFINE_CDT_H__
+#ifndef __P2TC_REFINE_RCDT_H__
+#define __P2TC_REFINE_RCDT_H__
 
 #include <poly2tri-c/p2t/poly2tri.h>
 #include "mesh.h"

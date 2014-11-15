@@ -76,7 +76,7 @@ p2tr_mesh_render_cache_uvt_exact (P2trMesh        *T,
                                   gint             dest_len,
                                   P2trImageConfig *config)
 {
-  gint x, y, n = dest_len;
+  guint x, y, n = dest_len;
   P2trUVT *uvt = dest;
   P2trTriangle *tr_prev = NULL;
   P2trVector2 pt;

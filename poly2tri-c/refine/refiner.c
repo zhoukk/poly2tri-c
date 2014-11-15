@@ -31,7 +31,7 @@
  */
 
 #include <glib.h>
-#include "cdt.h"
+#include "rcdt.h"
 #include "delaunay-terminator.h"
 #include "refiner.h"
 

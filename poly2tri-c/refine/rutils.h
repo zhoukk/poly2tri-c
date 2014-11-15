@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __P2TC_REFINE_UTILS_H__
-#define __P2TC_REFINE_UTILS_H__
+#ifndef __P2TC_REFINE_RUTILS_H__
+#define __P2TC_REFINE_RUTILS_H__
 
 #ifdef __cplusplus
 extern "C"

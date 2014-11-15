@@ -37,7 +37,7 @@
 #include "edge.h"
 #include "triangle.h"
 
-#include "cdt.h"
+#include "rcdt.h"
 #include "visibility.h"
 #include "cdt-flipfix.h"
 
@@ -82,7 +82,7 @@ p2tr_cdt_new (P2tCDT *cdt)
 
   P2trVEdgeSet *new_edges = p2tr_vedge_set_new ();
 
-  gint i, j;
+  guint i, j;
 
   rmesh->mesh = p2tr_mesh_new ();
   rmesh->outline = p2tr_pslg_new ();

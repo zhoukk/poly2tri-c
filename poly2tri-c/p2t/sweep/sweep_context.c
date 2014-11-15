@@ -62,7 +62,7 @@ p2t_sweepcontext_edgeevent_init (P2tSweepContextEdgeEvent* THIS)
 void
 p2t_sweepcontext_init (P2tSweepContext* THIS, P2tPointPtrArray polyline)
 {
-  int i;
+  guint i;
 
   THIS->front_ = NULL;
   THIS->head_ = NULL;
@@ -98,7 +98,7 @@ void
 p2t_sweepcontext_destroy (P2tSweepContext* THIS)
 {
   GList* iter;
-  int i;
+  guint i;
   /* Clean up memory */
 
   p2t_point_free (THIS->head_);
@@ -138,7 +138,7 @@ p2t_sweepcontext_delete (P2tSweepContext* THIS)
 void
 p2t_sweepcontext_add_hole (P2tSweepContext *THIS, P2tPointPtrArray polyline)
 {
-  int i;
+  guint i;
   p2t_sweepcontext_init_edges (THIS, polyline);
   for (i = 0; i < polyline->len; i++)
     {
@@ -167,7 +167,7 @@ p2t_sweepcontext_get_map (P2tSweepContext *THIS)
 void
 p2t_sweepcontext_init_triangulation (P2tSweepContext *THIS)
 {
-  int i;
+  guint i;
   double xmax = point_index (THIS->points_, 0)->x, xmin = point_index (THIS->points_, 0)->x;
   double ymax = point_index (THIS->points_, 0)->y, ymin = point_index (THIS->points_, 0)->y;
   double dx, dy;

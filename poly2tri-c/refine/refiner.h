@@ -34,7 +34,7 @@
 #define __P2TC_REFINE_REFINER_H__
 
 #include <glib.h>
-#include "cdt.h"
+#include "rcdt.h"
 
 typedef struct P2trRefiner_ P2trRefiner;
 

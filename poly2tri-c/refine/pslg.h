@@ -33,7 +33,7 @@
 #ifndef __P2TC_REFINE_PSLG_H__
 #define __P2TC_REFINE_PSLG_H__
 
-#include "utils.h"
+#include "rutils.h"
 #include "vector2.h"
 #include "line.h"
 #include "bounded-line.h"

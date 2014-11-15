@@ -33,7 +33,7 @@
 #include <math.h>
 #include <glib.h>
 
-#include "utils.h"
+#include "rutils.h"
 #include "rmath.h"
 
 #include "point.h"

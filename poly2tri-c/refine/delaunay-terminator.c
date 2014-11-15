@@ -34,7 +34,7 @@
 #include <math.h>
 #include <glib.h>
 
-#include "utils.h"
+#include "rutils.h"
 #include "rmath.h"
 
 #include "point.h"
@@ -42,7 +42,7 @@
 #include "triangle.h"
 
 #include "mesh.h"
-#include "cdt.h"
+#include "rcdt.h"
 #include "cluster.h"
 
 #include "vedge.h"
@@ -368,7 +368,7 @@ SplitPermitted (P2trDelaunayTerminator *self, P2trEdge *s, gdouble d)
 {
   P2trCluster *startCluster = p2tr_cluster_get_for (P2TR_EDGE_START(s), s);
   P2trCluster *endCluster =   p2tr_cluster_get_for (s->end, s);
-  P2trCluster *S_NOREF;
+  P2trCluster *S_NOREF =      NULL;
   GList *iter;
   
   gboolean permitted = FALSE;

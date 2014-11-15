@@ -37,8 +37,8 @@
 
 #include "edge.h"
 #include "vedge.h"
-#include "cdt.h"
-#include "utils.h"
+#include "rcdt.h"
+#include "rutils.h"
 
 /**
  * Flip-Fix all the virtual edges inside the given set

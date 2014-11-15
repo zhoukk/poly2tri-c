@@ -425,7 +425,7 @@ p2tr_visibility_is_visible_from_edges (P2trPSLG              *pslg,
                                        guint                  line_count)
 {
   P2trPSLG *edges = p2tr_pslg_new ();
-  gint i;
+  guint i;
   gboolean result;
   
   for (i = 0; i < line_count; i++)

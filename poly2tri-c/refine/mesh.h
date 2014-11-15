@@ -36,7 +36,7 @@
 #include <stdio.h>
 #include <glib.h>
 #include "vector2.h"
-#include "utils.h"
+#include "rutils.h"
 #include "triangulation.h"
 
 /**

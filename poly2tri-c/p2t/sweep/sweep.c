@@ -61,7 +61,7 @@ p2t_sweep_new ()
 void
 p2t_sweep_destroy (P2tSweep* THIS)
 {
-  int i;
+  guint i;
   /* Clean up memory */
   for (i = 0; i < THIS->nodes_->len; i++)
     {
@@ -94,7 +94,8 @@ p2t_sweep_triangulate (P2tSweep *THIS, P2tSweepContext *tcx)
 void
 p2t_sweep_sweep_points (P2tSweep *THIS, P2tSweepContext *tcx)
 {
-  int i, j;
+  int i;
+  guint j;
   for (i = 1; i < p2t_sweepcontext_point_count (tcx); i++)
     {
       P2tPoint* point = p2t_sweepcontext_get_point (tcx, i);
@@ -983,8 +984,9 @@ p2t_sweep_next_flip_point (P2tSweep *THIS, P2tPoint* ep, P2tPoint* eq, P2tTriang
     }
   else
     {
-      /*throw new RuntimeException("[Unsupported] Opposing point on constrained edge");*/
-      assert (0);
+      g_error ("[Unsupported] Opposing point on constrained edge");
+      /* Return a value to silence some compilers */
+      return NULL;
     }
 }
 

@@ -34,7 +34,7 @@
 #define __P2TC_REFINE_VEDGE_H__
 
 #include <glib.h>
-#include "utils.h"
+#include "rutils.h"
 #include "triangulation.h"
 
 /**

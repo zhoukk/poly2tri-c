@@ -33,7 +33,7 @@
 #include <stdarg.h>
 #include <glib.h>
 
-#include "utils.h"
+#include "rutils.h"
 
 GList*
 p2tr_utils_new_reversed_pointer_list (int count, ...)

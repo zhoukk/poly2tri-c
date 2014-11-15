@@ -31,7 +31,7 @@
  */
 
 #include <glib.h>
-#include "utils.h"
+#include "rutils.h"
 
 #include "mesh.h"
 #include "point.h"
